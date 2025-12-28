@@ -1,0 +1,1365 @@
+<!doctype html>
+<html lang="es">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>URbaBot - Secuencias</title>
+    <link rel="icon" type="image/png" href="img/robot-logo.png">
+
+  <style>
+        body {
+            box-sizing: border-box;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: auto;
+        }
+
+        body {
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .robot-emoji {
+            font-size: 3em;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin: 0;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-home {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-home:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .btn-tutorial {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-tutorial:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .level-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .level-info h2 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+
+        .level-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .level-btn {
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid white;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .level-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+
+        .level-btn.active {
+            background: white;
+            color: #667eea;
+        }
+
+        .game-container {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .grid-container {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(5, 70px);
+            grid-template-rows: repeat(5, 70px);
+            gap: 2px;
+            background: #dee2e6;
+            padding: 2px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            background: white;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            transition: all 0.3s ease;
+        }
+
+        .cell.obstacle {
+            background: #fff3cd;
+        }
+
+        .cell.goal {
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .robot {
+            width: 60px;
+            height: 60px;
+            transition: all 0.3s ease;
+            position: absolute;
+            z-index: 10;
+            object-fit: contain;
+        }
+
+        .robot.moving {
+            animation: bounce 0.3s ease;
+        }
+
+        .robot.turning {
+            animation: tilt 0.3s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes tilt {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            75% { transform: rotate(10deg); }
+        }
+
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .commands-section {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .commands-section h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .command-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .cmd-btn {
+            padding: 8px 6px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .cmd-forward {
+            background: #28a745;
+            color: white;
+        }
+
+        .cmd-forward:hover {
+            background: #218838;
+            transform: scale(1.05);
+        }
+
+        .cmd-backward {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .cmd-backward:hover {
+            background: #e0a800;
+            transform: scale(1.05);
+        }
+
+        .cmd-left {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .cmd-left:hover {
+            background: #e8690b;
+            transform: scale(1.05);
+        }
+
+        .cmd-right {
+            background: #6f42c1;
+            color: white;
+        }
+
+        .cmd-right:hover {
+            background: #5a32a3;
+            transform: scale(1.05);
+        }
+
+        .cmd-pickup {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .cmd-pickup:hover {
+            background: #138496;
+            transform: scale(1.05);
+        }
+
+        .cmd-dropoff {
+            background: #e83e8c;
+            color: white;
+        }
+
+        .cmd-dropoff:hover {
+            background: #d63384;
+            transform: scale(1.05);
+        }
+
+        .sequence-display {
+            background: #e9ecef;
+            padding: 8px;
+            border-radius: 10px;
+            min-height: 50px;
+            margin-bottom: 8px;
+        }
+
+        .sequence-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 6px;
+            font-size: 0.85em;
+        }
+
+        .sequence-commands {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .sequence-item {
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: move;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .sequence-item:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .sequence-item.dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+        }
+
+        .sequence-item.executing {
+            background: #ffc107 !important;
+            transform: scale(1.2);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.6);
+            animation: pulse-execute 0.5s ease-in-out;
+        }
+
+        @keyframes pulse-execute {
+            0%, 100% { transform: scale(1.2); }
+            50% { transform: scale(1.3); }
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-execute {
+            background: #28a745;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-execute:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-execute:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-reset {
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .btn-reset:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+            padding: 10px;
+            font-size: 0.9em;
+        }
+
+        .btn-clear:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+
+        .speed-control-inline {
+            display: flex;
+            gap: 4px;
+        }
+
+        .speed-control-inline .speed-btn {
+            padding: 10px 10px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .speed-control-inline .speed-btn.active {
+            background: #667eea;
+        }
+
+        .speed-control-inline .speed-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .stats-panel {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        .stats-panel h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px 50px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 1000;
+            text-align: center;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+            animation: messageAppear 0.3s ease;
+        }
+
+        @keyframes messageAppear {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .message.success {
+            border: 5px solid #28a745;
+        }
+
+        .message.error {
+            border: 5px solid #dc3545;
+        }
+
+        .message h2 {
+            margin-bottom: 15px;
+            font-size: 2em;
+        }
+
+        .message.success h2 {
+            color: #28a745;
+        }
+
+        .message.error h2 {
+            color: #dc3545;
+        }
+
+        .message p {
+            font-size: 1.2em;
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .message button {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .message button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.show {
+            display: block;
+        }
+
+        @media (max-width: 1024px) {
+            .game-container {
+                grid-template-columns: 1fr;
+            }
+
+            .grid {
+                grid-template-columns: repeat(5, 60px);
+                grid-template-rows: repeat(5, 60px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: repeat(5, 50px);
+                grid-template-rows: repeat(5, 50px);
+            }
+
+            .cell {
+                font-size: 2em;
+            }
+
+            .header h1 {
+                font-size: 1.5em;
+            }
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            margin-top: 30px;
+            border-top: 3px solid #667eea;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container">
+   <header class="header">
+    <div class="header-left">
+     <div class="robot-emoji">
+      🤖
+     </div>
+     <h1>♻️ URbaBot - Secuencias</h1>
+    </div>
+    <!-- <div class="header-buttons"><button class="btn btn-tutorial"> 📖 Ver Tutorial </button> <button class="btn btn-home"> 🏠 Volver al Menú </button>
+    </div> -->
+    <div class="header-buttons"><button class="btn btn-tutorial" onclick="window.location.href='secuencias-tutorial.html'"> 📖 Ver Tutorial </button> <button class="btn btn-home" onclick="window.location.href='index.html'"> 🏠 Volver al Menú </button>
+   </header>
+   <div class="content">
+    <div class="level-info">
+     <h2>Nivel <span id="currentLevel">1</span> de 10</h2>
+     <p id="levelDescription">¡Recoge todos los botes verdes y deposítalos!</p>
+     <div class="level-selector" id="levelSelector"></div>
+    </div>
+    <div class="game-container">
+     <div class="grid-container">
+      <div class="grid" id="grid"></div>
+     </div>
+     <div class="controls-panel">
+      <div class="stats-panel">
+       <h3> Objetivo del Nivel</h3>
+       <div class="stat-item"><span class="stat-number" id="targetCount">0/0</span> <span class="stat-label" id="targetLabel">Botes Objetivo</span>
+       </div>
+      </div>
+      <div class="commands-section">
+       <h3>🎮 Comandos</h3>
+       <div class="command-buttons"><button class="cmd-btn cmd-forward" onclick="addCommand('forward')"> ⬆️ Avanzar </button> <button class="cmd-btn cmd-backward" onclick="addCommand('backward')"> ⬇️ Retroceder </button> <button class="cmd-btn cmd-left" onclick="addCommand('left')"> ↶ Girar Izq </button> <button class="cmd-btn cmd-right" onclick="addCommand('right')"> ↷ Girar Der </button> <button class="cmd-btn cmd-pickup" onclick="addCommand('pickup')"> 🤚 Pick Up </button> <button class="cmd-btn cmd-dropoff" onclick="addCommand('dropoff')"> 📦 Drop Off </button>
+       </div>
+       <div class="sequence-display">
+        <div class="sequence-title">
+         📝 Secuencia:
+        </div>
+        <div class="sequence-commands" id="sequenceDisplay"></div>
+       </div>
+       <div class="action-buttons">
+        <div style="display: flex; gap: 8px; align-items: center;"><button class="btn-execute" id="executeBtn" onclick="executeSequence()" style="flex: 1;"> ▶️ Ejecutar </button>
+         <div class="speed-control-inline"><button class="speed-btn active" onclick="setSpeed('normal')" title="Normal"> 🐢 </button> <button class="speed-btn" onclick="setSpeed('turbo')" title="Turbo"> 🚀 </button>
+         </div>
+        </div>
+        <div style="display: flex; gap: 8px;"><button class="btn btn-reset" onclick="resetLevel()" style="flex: 1;"> 🔄 Reiniciar </button> <button class="btn btn-clear" onclick="clearAll()" style="flex: 1;"> 🗑️ Limpiar </button>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+   <div class="footer">
+    <p> URbaBot - Secuencias de Clasificación</p>
+    <p style="margin-top: 10px; font-size: 0.9em;">Desarrollado con ❤️ para aprender programación de forma divertida por el profesor <a href="https://elprofenoe.com" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: bold;">José Noé Sánchez Sierra</a> y <a href="https://canva.com" target="_blank" rel="noopener noreferrer" style="color: #667eea; text-decoration: none; font-weight: bold;">canva.com</a></p>
+   </div>
+  </div>
+  <div class="overlay" id="overlay"></div>
+  <div class="message" id="message">
+   <h2 id="messageTitle"></h2>
+   <p id="messageText"></p><button onclick="closeMessage()">Continuar</button>
+  </div>
+  <script>
+        // Efectos de sonido usando Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            switch(type) {
+                case 'move':
+                    oscillator.frequency.value = 300;
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'turn':
+                    oscillator.frequency.value = 400;
+                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.15);
+                    break;
+                case 'pickup':
+                    oscillator.frequency.value = 600;
+                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                    break;
+                case 'dropoff':
+                    oscillator.frequency.value = 500;
+                    gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.25);
+                    break;
+                case 'success':
+                    [523, 659, 784].forEach((freq, i) => {
+                        const osc = audioContext.createOscillator();
+                        const gain = audioContext.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioContext.destination);
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.2, audioContext.currentTime + i * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i * 0.1 + 0.3);
+                        osc.start(audioContext.currentTime + i * 0.1);
+                        osc.stop(audioContext.currentTime + i * 0.1 + 0.3);
+                    });
+                    break;
+                case 'error':
+                    oscillator.frequency.value = 200;
+                    oscillator.type = 'sawtooth';
+                    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    break;
+            }
+        }
+
+        const levels = [
+            {
+                description: "NIVEL 1: Avanza 1 paso y recoge el bote 🟢 VERDE. ¡Muy fácil!",
+                targetColor: 'green',
+                robot: {x: 2, y: 1, direction: 2},
+                walls: [],
+                objects: [
+                    {x: 2, y: 2, color: 'green', picked: false}
+                ],
+                containers: [
+                    {x: 2, y: 3, type: 'green'}
+                ]
+            },
+            {
+                description: "NIVEL 2: Avanza 2 pasos, recoge el bote 🟢 y deposítalo.",
+                targetColor: 'green',
+                robot: {x: 2, y: 0, direction: 2},
+                walls: [],
+                objects: [
+                    {x: 2, y: 2, color: 'green', picked: false}
+                ],
+                containers: [
+                    {x: 2, y: 3, type: 'green'}
+                ]
+            },
+            {
+                description: "NIVEL 3: Gira a la derecha, avanza y recoge el bote ⚪ BLANCO. ¡Hay 2 contenedores!",
+                targetColor: 'white',
+                robot: {x: 1, y: 2, direction: 2},
+                walls: [],
+                objects: [
+                    {x: 2, y: 2, color: 'white', picked: false}
+                ],
+                containers: [
+                    {x: 3, y: 2, type: 'white'},
+                    {x: 0, y: 2, type: 'green'}
+                ]
+            },
+            {
+                description: "NIVEL 4: Recoge 2 botes 🟢 VERDES. ¡Cuidado con el contenedor negro!",
+                targetColor: 'green',
+                robot: {x: 2, y: 0, direction: 2},
+                walls: [],
+                objects: [
+                    {x: 2, y: 1, color: 'green', picked: false},
+                    {x: 2, y: 2, color: 'green', picked: false}
+                ],
+                containers: [
+                    {x: 2, y: 3, type: 'green'},
+                    {x: 1, y: 3, type: 'black'}
+                ]
+            },
+            {
+                description: "NIVEL 5: Recoge 2 botes ⚫ NEGROS. ¡Identifica el contenedor correcto!",
+                targetColor: 'black',
+                robot: {x: 1, y: 2, direction: 1},
+                walls: [],
+                objects: [
+                    {x: 2, y: 2, color: 'black', picked: false},
+                    {x: 2, y: 3, color: 'black', picked: false}
+                ],
+                containers: [
+                    {x: 3, y: 3, type: 'black'},
+                    {x: 3, y: 1, type: 'white'}
+                ]
+            },
+            {
+                description: "NIVEL 6: Evita la barrera 🚧 y recoge 2 botes 🟢. ¡Usa el contenedor verde!",
+                targetColor: 'green',
+                robot: {x: 1, y: 1, direction: 2},
+                walls: [{x: 2, y: 2}],
+                objects: [
+                    {x: 1, y: 2, color: 'green', picked: false},
+                    {x: 3, y: 2, color: 'green', picked: false}
+                ],
+                containers: [
+                    {x: 2, y: 3, type: 'green'},
+                    {x: 3, y: 3, type: 'white'}
+                ]
+            },
+            {
+                description: "NIVEL 7: Recoge 3 botes ⚪ BLANCOS. ¡Hay 3 contenedores diferentes!",
+                targetColor: 'white',
+                robot: {x: 1, y: 1, direction: 1},
+                walls: [],
+                objects: [
+                    {x: 2, y: 1, color: 'white', picked: false},
+                    {x: 3, y: 1, color: 'white', picked: false},
+                    {x: 3, y: 2, color: 'white', picked: false}
+                ],
+                containers: [
+                    {x: 3, y: 3, type: 'white'},
+                    {x: 2, y: 3, type: 'green'},
+                    {x: 1, y: 3, type: 'black'}
+                ]
+            },
+            {
+                description: "NIVEL 8: Navega entre 2 barreras 🚧 y recoge 3 botes ⚫ NEGROS.",
+                targetColor: 'black',
+                robot: {x: 1, y: 0, direction: 2},
+                walls: [{x: 2, y: 1}, {x: 2, y: 3}],
+                objects: [
+                    {x: 1, y: 2, color: 'black', picked: false},
+                    {x: 3, y: 2, color: 'black', picked: false},
+                    {x: 1, y: 4, color: 'black', picked: false}
+                ],
+                containers: [
+                    {x: 3, y: 4, type: 'black'},
+                    {x: 0, y: 4, type: 'green'}
+                ]
+            },
+            {
+                description: "NIVEL 9: Recoge 4 botes 🟢 VERDES. ¡Múltiples contenedores!",
+                targetColor: 'green',
+                robot: {x: 1, y: 1, direction: 1},
+                walls: [],
+                objects: [
+                    {x: 2, y: 1, color: 'green', picked: false},
+                    {x: 3, y: 1, color: 'green', picked: false},
+                    {x: 3, y: 2, color: 'green', picked: false},
+                    {x: 2, y: 2, color: 'green', picked: false}
+                ],
+                containers: [
+                    {x: 1, y: 3, type: 'green'},
+                    {x: 3, y: 3, type: 'white'},
+                    {x: 4, y: 2, type: 'black'}
+                ]
+            },
+            {
+                description: "¡NIVEL FINAL! Recoge 5 botes ⚪ BLANCOS con 3 barreras 🚧 y varios contenedores.",
+                targetColor: 'white',
+                robot: {x: 0, y: 0, direction: 1},
+                walls: [{x: 2, y: 1}, {x: 1, y: 3}, {x: 3, y: 3}],
+                objects: [
+                    {x: 1, y: 0, color: 'white', picked: false},
+                    {x: 3, y: 0, color: 'white', picked: false},
+                    {x: 0, y: 2, color: 'white', picked: false},
+                    {x: 4, y: 2, color: 'white', picked: false},
+                    {x: 2, y: 4, color: 'white', picked: false}
+                ],
+                containers: [
+                    {x: 2, y: 2, type: 'white'},
+                    {x: 0, y: 4, type: 'green'},
+                    {x: 4, y: 4, type: 'black'}
+                ]
+            }
+        ];
+
+        let currentLevel = 0;
+        let robot = {x: 0, y: 0, direction: 0};
+        let commandSequence = [];
+        let isExecuting = false;
+        let speed = 500;
+
+        function initGame() {
+            createLevelSelector();
+            loadLevel(currentLevel);
+        }
+
+        function createLevelSelector() {
+            const selector = document.getElementById('levelSelector');
+            selector.innerHTML = '';
+            for (let i = 0; i < levels.length; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'level-btn' + (i === currentLevel ? ' active' : '');
+                btn.textContent = i + 1;
+                btn.onclick = () => changeLevel(i);
+                selector.appendChild(btn);
+            }
+        }
+
+        function changeLevel(levelIndex) {
+            if (isExecuting) return;
+            currentLevel = levelIndex;
+            commandSequence = [];
+            loadLevel(currentLevel);
+            createLevelSelector();
+        }
+
+        function loadLevel(levelIndex) {
+            const level = levels[levelIndex];
+            document.getElementById('currentLevel').textContent = levelIndex + 1;
+            document.getElementById('levelDescription').textContent = level.description;
+
+            robot = {...level.robot};
+            
+            updateStats();
+            renderGrid();
+            updateSequenceDisplay();
+        }
+
+        function updateStats() {
+            const level = levels[currentLevel];
+            
+            // Solo contar los botes del color objetivo
+            const targetObjects = level.objects.filter(o => o.color === level.targetColor);
+            const pickedCount = targetObjects.filter(o => o.picked).length;
+            const totalCount = targetObjects.length;
+            
+            const colorNames = {
+                'green': '🟢 Verdes',
+                'white': '⚪ Blancos',
+                'black': '⚫ Negros'
+            };
+            
+            document.getElementById('targetCount').textContent = `${pickedCount}/${totalCount}`;
+            document.getElementById('targetLabel').textContent = colorNames[level.targetColor];
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+
+            const level = levels[currentLevel];
+
+            for (let y = 0; y < 5; y++) {
+                for (let x = 0; x < 5; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+
+                    // Renderizar paredes/barreras
+                    if (level.walls.some(w => w.x === x && w.y === y)) {
+                        cell.classList.add('obstacle');
+                        cell.textContent = '🚧';
+                    }
+                    // Renderizar objetos (botes)
+                    else if (level.objects && level.objects.some(o => o.x === x && o.y === y && !o.picked)) {
+                        const obj = level.objects.find(o => o.x === x && o.y === y && !o.picked);
+                        const botesEmojis = {
+                            'green': '🟢',
+                            'white': '⚪',
+                            'black': '⚫'
+                        };
+                        cell.textContent = botesEmojis[obj.color];
+                    }
+                    
+                    // Renderizar contenedores
+                    const container = level.containers.find(c => c.x === x && c.y === y);
+                    if (container) {
+                        let containerColor;
+                        switch(container.type) {
+                            case 'green':
+                                containerColor = '#28a745';
+                                break;
+                            case 'white':
+                                containerColor = '#dee2e6';
+                                break;
+                            case 'black':
+                                containerColor = '#343a40';
+                                break;
+                        }
+                        
+                        cell.classList.add('goal');
+                        cell.style.background = containerColor;
+                        cell.innerHTML = '🗑️';
+                    }
+
+                    // Renderizar robot
+                    if (robot.x === x && robot.y === y) {
+                        const robotIcon = document.createElement('img');
+                        robotIcon.className = 'robot';
+                        robotIcon.id = 'robotElement';
+                        //robotIcon.src = 'https://i.imgur.com/wC3Mpyo.png';
+                        robotIcon.src = 'img/robot-logo.png';
+                        //robotIcon.innerHTML = `<img src="img/robot-logo.png" style="width:50px;height:50px;transform:rotate(${rotation}deg);transition:transform 0.3s ease;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">`;
+
+                        robotIcon.alt = 'URbaBot';
+                        // La imagen mira hacia abajo (dirección 2), ajustamos la rotación
+                        const rotationOffset = -180; // Offset porque la imagen base mira hacia abajo
+                        robotIcon.style.transform = `rotate(${robot.direction * 90 + rotationOffset}deg)`;
+                        robotIcon.onerror = function() { this.src = ''; this.alt = 'Robot'; };
+                        cell.appendChild(robotIcon);
+                    }
+
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function addCommand(command) {
+            if (isExecuting) return;
+            commandSequence.push(command);
+            updateSequenceDisplay();
+        }
+
+        function updateSequenceDisplay() {
+            const display = document.getElementById('sequenceDisplay');
+            display.innerHTML = '';
+
+            if (commandSequence.length === 0) {
+                display.innerHTML = '<span style="color: #6c757d; font-style: italic;">Vacío</span>';
+                return;
+            }
+
+            commandSequence.forEach((cmd, index) => {
+                const item = document.createElement('div');
+                item.className = 'sequence-item';
+                item.draggable = true;
+                item.dataset.index = index;
+                
+                switch(cmd) {
+                    case 'forward':
+                        item.style.background = '#28a745';
+                        item.style.color = 'white';
+                        item.textContent = '⬆️';
+                        break;
+                    case 'backward':
+                        item.style.background = '#ffc107';
+                        item.style.color = '#333';
+                        item.textContent = '⬇️';
+                        break;
+                    case 'left':
+                        item.style.background = '#fd7e14';
+                        item.style.color = 'white';
+                        item.textContent = '↶';
+                        break;
+                    case 'right':
+                        item.style.background = '#6f42c1';
+                        item.style.color = 'white';
+                        item.textContent = '↷';
+                        break;
+                    case 'pickup':
+                        item.style.background = '#17a2b8';
+                        item.style.color = 'white';
+                        item.textContent = '🤚';
+                        break;
+                    case 'dropoff':
+                        item.style.background = '#e83e8c';
+                        item.style.color = 'white';
+                        item.textContent = '📦';
+                        break;
+                }
+
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dblclick', () => removeCommand(index));
+                
+                display.appendChild(item);
+            });
+        }
+
+        let draggedIndex = null;
+
+        function handleDragStart(e) {
+            if (isExecuting) {
+                e.preventDefault();
+                return;
+            }
+            draggedIndex = parseInt(e.target.dataset.index);
+            e.target.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            if (isExecuting) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e) {
+            if (isExecuting) return;
+            e.preventDefault();
+            
+            const dropIndex = parseInt(e.target.dataset.index);
+            
+            if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                const draggedCommand = commandSequence[draggedIndex];
+                commandSequence.splice(draggedIndex, 1);
+                commandSequence.splice(dropIndex, 0, draggedCommand);
+                updateSequenceDisplay();
+            }
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedIndex = null;
+        }
+
+        function removeCommand(index) {
+            if (isExecuting) return;
+            commandSequence.splice(index, 1);
+            updateSequenceDisplay();
+        }
+
+        async function executeSequence() {
+            if (isExecuting || commandSequence.length === 0) return;
+
+            isExecuting = true;
+            document.getElementById('executeBtn').disabled = true;
+
+            const level = levels[currentLevel];
+            let tempRobot = {...robot};
+            let carryingTrash = null;
+
+            for (let i = 0; i < commandSequence.length; i++) {
+                const command = commandSequence[i];
+                
+                const sequenceItems = document.querySelectorAll('.sequence-item');
+                sequenceItems.forEach((item, idx) => {
+                    if (idx === i) {
+                        item.classList.add('executing');
+                    } else {
+                        item.classList.remove('executing');
+                    }
+                });
+
+                switch(command) {
+                    case 'forward':
+                        if (!moveRobot(tempRobot, 1)) {
+                            playSound('error');
+                            showMessage('error', '¡Choque!', 'URbaBot chocó contra un obstáculo. ¡Intenta de nuevo!');
+                            isExecuting = false;
+                            document.getElementById('executeBtn').disabled = false;
+                            sequenceItems.forEach(item => item.classList.remove('executing'));
+                            return;
+                        }
+                        playSound('move');
+                        addRobotAnimation('moving');
+                        break;
+                    case 'backward':
+                        if (!moveRobot(tempRobot, -1)) {
+                            playSound('error');
+                            showMessage('error', '¡Choque!', 'URbaBot chocó contra un obstáculo. ¡Intenta de nuevo!');
+                            isExecuting = false;
+                            document.getElementById('executeBtn').disabled = false;
+                            sequenceItems.forEach(item => item.classList.remove('executing'));
+                            return;
+                        }
+                        playSound('move');
+                        addRobotAnimation('moving');
+                        break;
+                    case 'left':
+                        tempRobot.direction = (tempRobot.direction + 3) % 4;
+                        playSound('turn');
+                        addRobotAnimation('turning');
+                        break;
+                    case 'right':
+                        tempRobot.direction = (tempRobot.direction + 1) % 4;
+                        playSound('turn');
+                        addRobotAnimation('turning');
+                        break;
+                    case 'pickup':
+                        const objIndex = level.objects.findIndex(o => o.x === tempRobot.x && o.y === tempRobot.y && !o.picked);
+                        if (objIndex !== -1) {
+                            carryingTrash = level.objects[objIndex].color;
+                            level.objects[objIndex].picked = true;
+                            playSound('pickup');
+                            updateStats();
+                        }
+                        break;
+                    case 'dropoff':
+                        const container = level.containers.find(c => c.x === tempRobot.x && c.y === tempRobot.y);
+                        if (container && carryingTrash) {
+                            if (container.type === carryingTrash) {
+                                carryingTrash = null;
+                                playSound('dropoff');
+                            } else {
+                                playSound('error');
+                                const colorNames = {
+                                    'green': 'VERDE 🟢',
+                                    'white': 'BLANCO ⚪',
+                                    'black': 'NEGRO ⚫'
+                                };
+                                showMessage('error', '¡Contenedor Incorrecto!', `Este bote ${colorNames[carryingTrash]} no va en el contenedor ${colorNames[container.type]}.`);
+                                isExecuting = false;
+                                document.getElementById('executeBtn').disabled = false;
+                                sequenceItems.forEach(item => item.classList.remove('executing'));
+                                return;
+                            }
+                        }
+                        break;
+                }
+
+                robot = {...tempRobot};
+                renderGrid();
+                await sleep(speed);
+            }
+
+            document.querySelectorAll('.sequence-item').forEach(item => item.classList.remove('executing'));
+
+            // VALIDACIÓN CORREGIDA: Solo verificar el color objetivo
+            const targetObjects = level.objects.filter(o => o.color === level.targetColor);
+            const allTargetsPicked = targetObjects.every(o => o.picked);
+            
+            if (allTargetsPicked && carryingTrash === null) {
+                playSound('success');
+                showMessage('success', '¡Excelente! 🎉', `¡Nivel ${currentLevel + 1} completado!`);
+                
+                setTimeout(() => {
+                    if (currentLevel < levels.length - 1) {
+                        currentLevel++;
+                        commandSequence = [];
+                        loadLevel(currentLevel);
+                        createLevelSelector();
+                    } else {
+                        showMessage('success', '¡JUEGO COMPLETADO! 🏆', '¡Has completado todos los niveles!');
+                    }
+                }, 2000);
+            } else if (!allTargetsPicked) {
+                playSound('error');
+                const colorNames = {
+                    'green': 'verdes 🟢',
+                    'white': 'blancos ⚪',
+                    'black': 'negros ⚫'
+                };
+                showMessage('error', '¡Faltan Botes!', `¡Recoge todos los botes ${colorNames[level.targetColor]}!`);
+            } else if (carryingTrash !== null) {
+                playSound('error');
+                showMessage('error', '¡Deposita el bote!', '¡Tienes un bote en las manos!');
+            }
+
+            isExecuting = false;
+            document.getElementById('executeBtn').disabled = false;
+        }
+
+        function moveRobot(robotState, steps) {
+            const level = levels[currentLevel];
+            let newX = robotState.x;
+            let newY = robotState.y;
+
+            switch(robotState.direction) {
+                case 0: newY -= steps; break;
+                case 1: newX += steps; break;
+                case 2: newY += steps; break;
+                case 3: newX -= steps; break;
+            }
+
+            if (newX < 0 || newX > 4 || newY < 0 || newY > 4) {
+                return false;
+            }
+
+            if (level.walls.some(w => w.x === newX && w.y === newY)) {
+                return false;
+            }
+
+            robotState.x = newX;
+            robotState.y = newY;
+            return true;
+        }
+
+        function resetLevel() {
+            if (isExecuting) return;
+            
+            const level = levels[currentLevel];
+            level.objects.forEach(obj => obj.picked = false);
+            robot = {...level.robot};
+            updateStats();
+            renderGrid();
+        }
+
+        function clearAll() {
+            if (isExecuting) return;
+            
+            commandSequence = [];
+            const level = levels[currentLevel];
+            robot = {...level.robot};
+            renderGrid();
+            updateSequenceDisplay();
+        }
+
+        function setSpeed(speedType) {
+            const buttons = document.querySelectorAll('.speed-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            if (speedType === 'normal') {
+                speed = 500;
+                buttons[0].classList.add('active');
+            } else {
+                speed = 200;
+                buttons[1].classList.add('active');
+            }
+        }
+
+        function showMessage(type, title, text) {
+            const message = document.getElementById('message');
+            const overlay = document.getElementById('overlay');
+            
+            message.className = 'message show ' + type;
+            document.getElementById('messageTitle').textContent = title;
+            document.getElementById('messageText').textContent = text;
+            
+            overlay.classList.add('show');
+        }
+
+        function closeMessage() {
+            document.getElementById('message').classList.remove('show');
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function addRobotAnimation(animationType) {
+            const robotElement = document.getElementById('robotElement');
+            if (robotElement) {
+                robotElement.classList.add(animationType);
+                setTimeout(() => {
+                    robotElement.classList.remove(animationType);
+                }, 300);
+            }
+        }
+
+        initGame();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b4aacac80abb6ac',t:'MTc2Njg1Nzk3Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

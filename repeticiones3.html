@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URbaBot - Repeticiones Básicas</title>
+    <link rel="icon" href="img/favicon.ico">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%; width: 100%; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #f0f2f5;
+            overflow: auto; padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; margin: 0 auto; background: white; 
+            border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; 
+        }
+        .header { 
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+            color: white; padding: 20px 30px; display: flex; 
+            justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; 
+        }
+        .grid { 
+            display: grid; grid-template-columns: repeat(5, 70px); 
+            grid-template-rows: repeat(5, 70px); gap: 2px; 
+            background: #dee2e6; padding: 5px; border-radius: 10px; 
+        }
+        .cell { 
+            background: white; position: relative; display: flex; 
+            align-items: center; justify-content: center; font-size: 2.5em; 
+        }
+        .robot { width: 50px; height: 50px; z-index: 10; transition: all 0.3s; }
+        .controls-panel { background: #f8f9fa; padding: 15px; border-radius: 15px; }
+        .cmd-btn { 
+            padding: 10px; border: none; border-radius: 8px; cursor: pointer; 
+            font-weight: bold; color: white; transition: 0.2s; 
+        }
+        .cmd-forward { background: #28a745; }
+        .cmd-left { background: #fd7e14; }
+        .cmd-right { background: #6f42c1; }
+        /* Estilos adicionales para la secuencia */
+        .sequence-item { 
+            background: #eee; padding: 5px 10px; border-radius: 5px; 
+            display: flex; align-items: center; gap: 10px; margin: 2px;
+        }
+        /* ... (el resto del CSS que ya tenías funciona bien en local) */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-left">
+                <span style="font-size: 2.5em;">🤖</span>
+                <h1>URbaBot - Local</h1>
+            </div>
+            <div class="header-buttons">
+                <button class="btn" onclick="location.href='index.html'">🏠 Inicio</button>
+            </div>
+        </header>
+        
+        <div style="display: flex; padding: 20px; gap: 20px; flex-wrap: wrap;">
+            <div id="grid" class="grid">
+                </div>
+
+            <div class="controls-panel">
+                <h3>Comandos</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                    <button class="cmd-btn cmd-forward" onclick="addCommand('forward')">⬆️ Avanzar</button>
+                    <button class="cmd-btn cmd-left" onclick="addCommand('left')">↶ Girar Izq</button>
+                    <button class="cmd-btn cmd-right" onclick="addCommand('right')">↷ Girar Der</button>
+                </div>
+                <div id="sequenceDisplay" style="margin-top: 20px; min-height: 100px; border: 1px dashed #ccc; padding: 10px;">
+                    </div>
+                <button id="executeBtn" style="width: 100%; margin-top: 10px; padding: 15px; background: #28a745; color: white; border: none; border-radius: 10px; cursor: pointer;" onclick="executeSequence()">▶️ Ejecutar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lógica simplificada para correr 100% offline
+        let commands = [];
+        const gridElement = document.getElementById('grid');
+
+        // Crear tablero 5x5
+        function createGrid() {
+            gridElement.innerHTML = '';
+            for(let i=0; i<25; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                gridElement.appendChild(cell);
+            }
+            // Poner robot inicial
+            document.getElementById('cell-0').innerHTML = '🤖';
+        }
+
+        function addCommand(type) {
+            commands.push(type);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const display = document.getElementById('sequenceDisplay');
+            display.innerHTML = commands.map(c => `<div class="sequence-item">${c}</div>`).join('');
+        }
+
+        async function executeSequence() {
+            // Aquí iría tu lógica de movimiento que ya tienes en el script original
+            alert("Ejecutando secuencia: " + commands.join(', '));
+        }
+
+        createGrid();
+    </script>
+</body>
+</html>
