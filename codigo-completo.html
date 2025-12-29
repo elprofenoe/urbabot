@@ -1,0 +1,2683 @@
+<!doctype html>
+<html lang="es" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programando con URbaBot</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif;
+    }
+
+    .grid-cell {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #7dd3fc;
+      position: relative;
+      background: #f0f9ff;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 1280px) {
+      .grid-cell {
+        width: 50px;
+        height: 50px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .grid-cell {
+        width: 45px;
+        height: 45px;
+      }
+    }
+
+    .robot {
+      width: 55px;
+      height: 55px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.5s ease;
+      z-index: 10;
+    }
+
+    .trash-icon {
+      width: 40px;
+      height: 40px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .command-btn {
+      transition: all 0.2s ease;
+    }
+
+    .command-btn:hover {
+      transform: scale(1.05);
+    }
+
+    .command-btn:active {
+      transform: scale(0.95);
+    }
+
+    .command-item {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: move;
+      user-select: none;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .command-item:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .command-item.executing {
+      animation: pulse-highlight 0.6s ease-in-out;
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.8);
+      transform: scale(1.15);
+      z-index: 100;
+    }
+
+    @keyframes pulse-highlight {
+      0%, 100% { 
+        box-shadow: 0 0 20px rgba(234, 179, 8, 0.8);
+        transform: scale(1.15);
+      }
+      50% { 
+        box-shadow: 0 0 30px rgba(234, 179, 8, 1);
+        transform: scale(1.2);
+      }
+    }
+
+    .command-item.dragging {
+      opacity: 0.5;
+    }
+
+    .loop-marker {
+      display: inline-block;
+      width: 4px;
+      height: 100%;
+      position: absolute;
+      left: 0;
+      top: 0;
+      background: #ec4899;
+      border-radius: 4px 0 0 4px;
+    }
+
+    .loop-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      margin: 4px 0;
+      background: rgba(236, 72, 153, 0.05);
+      border-radius: 8px;
+    }
+
+    .loop-parenthesis {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #ec4899;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .loop-badge-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background: #ec4899;
+      border-radius: 8px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+
+    .loop-badge-container:hover {
+      background: #db2777;
+      transform: scale(1.03);
+    }
+
+    .loop-contents {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .repeat-command {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 1.1rem;
+    }
+
+    .repeat-badge {
+      background: white;
+      color: #8b5cf6;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .repeat-config {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 10px;
+      background: white;
+      border: 3px solid #8b5cf6;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 280px;
+    }
+
+    .repeat-config-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #8b5cf6;
+      text-align: center;
+    }
+
+    .repeat-config-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .repeat-config-controls button {
+      background: #8b5cf6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .repeat-config-controls button:hover {
+      background: #7c3aed;
+      transform: scale(1.1);
+    }
+
+    .repeat-config-controls button:active {
+      transform: scale(0.95);
+    }
+
+    .repeat-config-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #8b5cf6;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .obstacle {
+      width: 40px;
+      height: 40px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .success-animation {
+      animation: celebrate 0.6s ease;
+    }
+
+    @keyframes celebrate {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% { 
+        opacity: 0.7;
+        transform: scale(1.05);
+      }
+    }
+
+    .menu-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .menu-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 600px;
+      max-height: 80%;
+      overflow-y: auto;
+      padding: 32px;
+      margin: 20px;
+    }
+
+    .game-controls-overlay {
+      position: absolute;
+      top: -50px;
+      right: 10px;
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    .overlay-btn {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #0284c7;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .overlay-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .overlay-btn.active {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .overlay-btn.run {
+      background: #22c55e;
+      color: white;
+      border-color: #22c55e;
+      font-size: 1.1rem;
+    }
+
+    .overlay-btn.run:hover {
+      background: #16a34a;
+    }
+
+    .medal-display {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border: 3px solid #f59e0b;
+      margin-top: 16px;
+    }
+
+    .medal-icon {
+      font-size: 3rem;
+      animation: medal-bounce 1s ease infinite;
+    }
+
+    @keyframes medal-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .medal-info {
+      flex: 1;
+    }
+
+    .medal-title {
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #92400e;
+    }
+
+    .medal-description {
+      font-size: 0.95rem;
+      color: #b45309;
+      margin-top: 4px;
+    }
+
+    .medal-targets {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      border: 2px solid #fbbf24;
+    }
+
+    .medal-target-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px;
+      margin: 4px 0;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .medal-target-item.achieved {
+      background: #d1fae5;
+      color: #065f46;
+      font-weight: bold;
+    }
+
+    .nested-loop-container {
+      border-left: 4px solid #c026d3;
+      padding-left: 8px;
+      margin-left: 4px;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);">
+   <div class="h-full overflow-auto">
+    <div class="max-w-7xl mx-auto p-6"><!-- Header -->
+     <div class="mb-6">
+      <div class="flex items-start justify-between mb-2">
+       <div class="flex-1">
+        <h1 id="game-title" class="text-4xl font-bold mb-2" style="color: #0c4a6e;">Pensamiento Computacional con URbaBot</h1>
+        <p class="text-xl mb-4" style="color: #075985;">Ayuda a nuestro robot a cuidar el medio ambiente mediante la programación</p>
+        <p id="instruction-text" class="text-lg" style="color: #075985;">Usa los comandos para guiar a Urbabot hasta la basura y recógela</p>
+       </div>
+       <div class="flex flex-col items-center gap-3"><img src="https://i.imgur.com/g0y6vuq.png" alt="URbaBot Logo" style="max-width: 220px; height: auto; flex-shrink: 0;" onerror="this.style.display='none';">
+       </div>
+      </div>
+     </div><!-- Main Menu -->
+     <div id="main-menu">
+      <div class="flex justify-between items-center mb-6">
+       <div class="flex-1">
+        <h2 class="text-3xl font-bold mb-1" style="color: #0c4a6e;">🎮 Menú Principal</h2>
+        <p class="text-lg" style="color: #075985;">Selecciona el tipo de ejercicio de pensamiento computacional</p>
+       </div><button id="btn-instructions-menu" class="command-btn px-6 py-3 rounded-lg text-white font-bold text-lg" style="background: #0284c7;" onclick="openInstructions()"> 📖 INSTRUCCIONES </button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"><!-- Secuencias Sencillas -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('secuencias')" style="border: 4px solid #2563eb;">
+        <div class="text-6xl text-center mb-4">
+         🗑️
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Secuencias Sencillas</h3>
+        <p class="text-center" style="color: #075985;">Aprende a crear secuencias de comandos básicos para guiar a URbaBot</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #2563eb;">10 Niveles</span>
+        </div>
+       </div><!-- Secuencias Avanzadas -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('secuencias_avanzadas')" style="border: 4px solid #16a34a;">
+        <div class="text-6xl text-center mb-4">
+         🗑️ 📦
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Secuencias</h3>
+        <p class="text-center" style="color: #075985;">Recoge la basura y llévala al contenedor. ¡Más obstáculos y desafíos!</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #16a34a;">10 Niveles</span>
+        </div>
+       </div><!-- Repeticiones -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('repeticiones')" style="border: 4px solid #8b5cf6;">
+        <div class="text-6xl text-center mb-4">
+         🔢
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Repeticiones</h3>
+        <p class="text-center" style="color: #075985;">Los mismos retos que "Secuencias Sencillas", pero optimiza tu código con repeticiones. ¡Haz más con menos!</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #8b5cf6;">10 Niveles</span>
+        </div>
+       </div><!-- Repeticiones 2 -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('repeticiones2')" style="border: 4px solid #7c3aed;">
+        <div class="text-6xl text-center mb-4">
+         🔢 🗑️ 📦
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Repeticiones 2</h3>
+        <p class="text-center" style="color: #075985;">Los mismos retos que "Secuencias", pero optimiza tu código con repeticiones avanzadas</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #7c3aed;">10 Niveles</span>
+        </div>
+       </div><!-- Bucles Sencillos -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('bucles')" style="border: 4px solid #ec4899;">
+        <div class="text-6xl text-center mb-4">
+         🔄
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Bucles Sencillos</h3>
+        <p class="text-center" style="color: #075985;">Aprende a repetir secuencias completas de comandos. ¡Escala el siguiente nivel del pensamiento computacional!</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #ec4899;">10 Niveles</span>
+        </div>
+       </div><!-- Bucles Avanzados -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg" onclick="selectMenu('bucles_avanzados')" style="border: 4px solid #c026d3;">
+        <div class="text-6xl text-center mb-4">
+         🔄🔢
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Bucles Avanzados</h3>
+        <p class="text-center" style="color: #075985;">Usa bucles anidados para crear patrones geométricos complejos. ¡Gana medallas!</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #c026d3;">10 Niveles + 🏅</span>
+        </div>
+       </div><!-- Próximamente: Condicionales -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg opacity-60" style="border: 4px solid #94a3b8;">
+        <div class="text-6xl text-center mb-4">
+         ❓
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Condicionales</h3>
+        <p class="text-center" style="color: #075985;">Toma decisiones basadas en las condiciones del entorno</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #94a3b8;">Próximamente</span>
+        </div>
+       </div><!-- Próximamente: Funciones -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg opacity-60" style="border: 4px solid #94a3b8;">
+        <div class="text-6xl text-center mb-4">
+         📦
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Funciones</h3>
+        <p class="text-center" style="color: #075985;">Crea funciones reutilizables para resolver problemas complejos</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #94a3b8;">Próximamente</span>
+        </div>
+       </div><!-- Próximamente: Desafíos -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg opacity-60" style="border: 4px solid #94a3b8;">
+        <div class="text-6xl text-center mb-4">
+         🏆
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Desafíos Avanzados</h3>
+        <p class="text-center" style="color: #075985;">Pon a prueba todas tus habilidades con retos difíciles</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #94a3b8;">Próximamente</span>
+        </div>
+       </div><!-- Próximamente: Modo Libre -->
+       <div class="menu-card bg-white rounded-lg p-6 shadow-lg opacity-60" style="border: 4px solid #94a3b8;">
+        <div class="text-6xl text-center mb-4">
+         🎨
+        </div>
+        <h3 class="text-2xl font-bold text-center mb-2" style="color: #0c4a6e;">Modo Libre</h3>
+        <p class="text-center" style="color: #075985;">Crea tus propios niveles y experimenta libremente</p>
+        <div class="text-center mt-4"><span class="px-4 py-2 rounded-lg text-white font-bold" style="background: #94a3b8;">Próximamente</span>
+        </div>
+       </div>
+      </div><!-- Main Menu Footer -->
+      <div class="mt-8 text-center">
+       <p class="text-lg font-semibold" style="color: #075985;">Profesor José Noé Sánchez Sierra</p><a href="https://elprofenoe.com" target="_blank" rel="noopener noreferrer" class="text-lg font-bold hover:underline" style="color: #0c4a6e;"> https://elprofenoe.com </a>
+      </div>
+     </div><!-- Game Container -->
+     <div id="game-container" class="hidden"><!-- Back to Menu Button -->
+      <div class="mb-4"><button id="btn-back-menu" class="command-btn px-4 py-2 rounded-lg text-white font-bold" style="background: #64748b;"> ⬅️ VOLVER AL MENÚ </button>
+      </div><!-- Level Info -->
+      <div class="bg-white rounded-lg p-4 shadow-lg mb-4">
+       <div class="flex justify-between items-center mb-3">
+        <div>
+         <div class="text-2xl font-bold mb-1" style="color: #0c4a6e;" id="menu-name">
+          Secuencias Sencillas
+         </div><span class="text-sm font-semibold" style="color: #075985;">Reto <span id="current-level">1</span>/10</span>
+        </div>
+        <div id="level-description" class="text-lg font-semibold" style="color: #075985;">
+         Nivel 1: Primer paso
+        </div>
+       </div><!-- Progress Bar -->
+       <div class="flex gap-1" id="progress-bar"><!-- Progress dots will be inserted here -->
+       </div><!-- Solution Tutorial (only for level 1 of bucles_avanzados) -->
+       <div id="solution-tutorial" class="hidden mt-4">
+        <div style="background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%); border: 3px solid #7c3aed; border-radius: 12px; padding: 16px;">
+         <div class="text-center font-bold mb-3" style="color: #5b21b6; font-size: 1.2rem;">
+          💡 Tutorial: Bucles Anidados
+         </div>
+         <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="color: #6b21a8; font-size: 0.95rem; line-height: 1.6;">
+           <p class="mb-2"><strong>¿Qué son los bucles anidados?</strong></p>
+           <p class="mb-3">Son bucles <strong>DENTRO</strong> de otros bucles. Sirven para crear patrones que se repiten de forma compleja.</p>
+           <p class="mb-2"><strong>Ejemplo de solución para este nivel:</strong></p>
+           <div id="solution-display" style="background: #faf5ff; border: 2px solid #c026d3; border-radius: 8px; padding: 12px; font-size: 1.0rem; text-align: center; font-weight: bold; color: #86198f; margin: 10px 0;">
+            🗑️ ⬆️ REPETIR 4 VECES ( REPETIR 3 VECES ( 🗑️ ⬆️ ) ↶ )
+           </div>
+           <p style="font-size: 0.85rem; color: #7c3aed; margin-top: 8px;"><strong>Explicación paso a paso:</strong><br>
+             1. <strong>🗑️ PICK UP</strong> - Recoge el bote inicial (URbaBot comienza en una celda con basura)<br>
+             2. <strong>⬆️ AVANZAR</strong> - Entra al perímetro del cuadrado<br>
+             3. <strong>🔢 REPETIR</strong> (configura a 4 veces - los 4 lados del cuadrado)<br>
+             4. <strong>( PARÉNTESIS ABRE</strong> - Inicia el bucle exterior<br>
+             5. <strong>🔢 REPETIR</strong> (configura a 3 veces - los 3 botes restantes del lado)<br>
+             6. <strong>( PARÉNTESIS ABRE</strong> - Inicia el bucle interior<br>
+             7. <strong>🗑️ PICK UP</strong> - Recoge basura<br>
+             8. <strong>⬆️ AVANZAR</strong> - Avanza una casilla<br>
+             9. <strong>) PARÉNTESIS CIERRA</strong> - Cierra el bucle interior (se repite 3 veces)<br>
+             10. <strong>↶ GIRAR IZQ</strong> - Gira para el siguiente lado<br>
+             11. <strong>) PARÉNTESIS CIERRA</strong> - Cierra el bucle exterior (se repite 4 veces)<br><br><strong>🎯 Bucles anidados en acción:</strong><br>
+             🔄 <strong>Bucle exterior:</strong> Repite 4 veces (los 4 lados del perímetro)<br>
+             🔄 <strong>Bucle interior:</strong> Repite 3 veces (recoge-avanza) por cada lado<br>
+             📐 <strong>El cuadrado:</strong> 13 botes de basura (1 inicial + 12 del perímetro 3×4)<br>
+             💡 <strong>¡Nota!</strong> URbaBot inicia en la columna 2, renglón 1 mirando hacia abajo ⬇️ <strong>¡y ya hay un bote de basura allí!</strong> Por eso la solución comienza con PICK UP. ¡Solo 10 comandos para medalla de oro! 🏅</p>
+          </div>
+         </div><button id="btn-hide-solution" class="w-full py-2 rounded-lg text-white font-bold" style="background: #7c3aed; transition: all 0.2s;" onclick="hideSolutionTutorial()"> ✓ Entendido, ocultar tutorial </button>
+        </div>
+       </div><!-- Show Tutorial Button (only for level 1 when tutorial is hidden) -->
+       <div id="show-tutorial-btn" class="hidden mt-4"><button onclick="showSolutionTutorial()" class="w-full py-3 rounded-lg text-white font-bold" style="background: #8b5cf6; transition: all 0.2s;"> 💡 MOSTRAR TUTORIAL DE BUCLES ANIDADOS </button>
+       </div><!-- Medal Targets (only for bucles_avanzados) -->
+       <div id="medal-targets-display" class="hidden mt-4">
+        <div class="medal-targets">
+         <div class="flex justify-between items-center mb-2">
+          <div class="font-bold flex-1" style="color: #92400e; font-size: 1.1rem;">
+           🎯 Metas de Optimización
+          </div><button id="btn-toggle-medal-targets" onclick="toggleMedalTargets()" class="px-3 py-1 rounded text-sm font-bold" style="background: #fbbf24; color: #92400e; transition: all 0.2s;"> ��� Ocultar </button>
+         </div>
+         <div id="medal-targets-content">
+          <div class="medal-target-item" id="gold-target">
+           🥇 ORO: <span id="gold-count">8</span> comandos o menos
+          </div>
+          <div class="medal-target-item" id="silver-target">
+           🥈 PLATA: <span id="silver-count">12</span> comandos o menos
+          </div>
+          <div class="medal-target-item" id="bronze-target">
+           🥉 BRONCE: <span id="bronze-count">20</span> comandos o menos
+          </div>
+          <div class="text-center mt-2" style="color: #78716c; font-size: 0.85rem;">
+           Comandos actuales: <strong id="current-command-count">0</strong>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6"><!-- Left Column: Control Panel -->
+       <div>
+        <div class="bg-white rounded-lg p-3 shadow-lg">
+         <h3 class="text-lg font-bold mb-2 text-center" style="color: #0c4a6e;">🎮 Panel de Control</h3><!-- Command Buttons -->
+         <div class="grid grid-cols-2 gap-2 mb-2"><button id="btn-forward" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #2563eb; min-height: 60px;">
+           <div style="font-size: 1.8rem;">
+            ⬆
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="forward-label">AVANZAR</span>
+           </div></button> <button id="btn-backward" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #eab308; min-height: 60px;">
+           <div style="font-size: 1.8rem;">
+            ⬇
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="backward-label">RETROCEDER</span>
+           </div></button> <button id="btn-left" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #f97316; min-height: 60px;">
+           <div style="font-size: 1.8rem;">
+            ↶
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="left-label">GIRAR IZQ</span>
+           </div></button> <button id="btn-right" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #a855f7; min-height: 60px;">
+           <div style="font-size: 1.8rem;">
+            ↷
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="right-label">GIRAR DER</span>
+           </div></button>
+         </div>
+         <div class="grid grid-cols-2 gap-2 mb-2"><button id="btn-pickup" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #dc2626; min-height: 60px;">
+           <div style="font-size: 1.5rem;">
+            🗑️
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="pickup-label">PICK UP</span>
+           </div></button> <button id="btn-dropoff" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #059669; min-height: 60px;">
+           <div style="font-size: 1.5rem;">
+            📦
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="dropoff-label">DROP OFF</span>
+           </div></button>
+         </div><button id="btn-repeat" class="command-btn w-full py-1 rounded-lg text-white font-bold mb-2" style="background: #8b5cf6; display: none; min-height: 50px;"> <span style="font-size: 1.5rem;">🔢</span> <span style="font-size: 0.75rem;" id="repeat-label">REPETIR</span> </button>
+         <div class="grid grid-cols-2 gap-2 mb-2" id="loop-buttons" style="display: none;"><button id="btn-start-loop" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #ec4899; min-height: 50px;">
+           <div style="font-size: 1.5rem;">
+            (
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="start-loop-label">PARÉNTESIS ABRE</span>
+           </div></button> <button id="btn-end-loop" class="command-btn py-1 px-2 rounded-lg text-white font-bold" style="background: #ec4899; min-height: 50px;">
+           <div style="font-size: 1.5rem;">
+            )
+           </div>
+           <div style="font-size: 0.65rem;">
+            <span id="end-loop-label">PARÉNTESIS CIERRA</span>
+           </div></button>
+         </div><button id="btn-loop-repeat" class="command-btn w-full py-1 rounded-lg text-white font-bold mb-2" style="background: #8b5cf6; display: none; min-height: 50px;"> <span style="font-size: 1.5rem;">🔢</span> <span style="font-size: 0.75rem;" id="loop-repeat-label">REPETIR</span> </button> <!-- Action Buttons -->
+         <div class="space-y-2"><button id="btn-reset" class="command-btn w-full py-1 rounded-lg text-white font-bold" style="background: #0284c7; min-height: 45px; font-size: 0.85rem;"> 🔄 <span id="reset-label">REINICIAR</span> </button>
+         </div><!-- Help Text -->
+         <div class="mt-3 p-2 rounded-lg" style="background: #e0f2fe;">
+          <p class="text-xs text-center" style="color: #075985;"><strong>💡 Consejo:</strong> Usa <strong>REINICIAR</strong> para probar de nuevo sin borrar tu secuencia. Usa <strong>LIMPIAR TODO</strong> para empezar desde cero.</p>
+         </div>
+        </div>
+       </div><!-- Right Column: Game Grid and Sequence -->
+       <div class="space-y-6"><!-- Game Grid -->
+        <div class="bg-white rounded-lg p-4 md:p-6 shadow-lg" style="position: relative;"><!-- Controles superpuestos sobre el escenario -->
+         <div class="game-controls-overlay" style="justify-content: space-between; width: 100%; left: 0; right: 0; padding: 0 10px;"><button id="btn-tutorial" class="overlay-btn" title="Ver Tutorial" onclick="reopenMenuTutorial()"> 📖 Tutorial </button>
+          <div style="display: flex; gap: 8px;"><button id="btn-speed-normal" class="overlay-btn active" title="Velocidad Normal" onclick="setSpeedNormal()"> 🐢 Normal </button> <button id="btn-speed-turbo" class="overlay-btn" title="Velocidad Turbo" onclick="setSpeedTurbo()"> 🚀 Turbo </button> <button id="btn-run" class="overlay-btn run"> ▶️ <span id="run-label">EJECUTAR</span> </button>
+          </div>
+         </div>
+         <div id="game-grid" class="inline-block mx-auto" style="display: flex; flex-direction: column; gap: 0;"></div><!-- Success Message -->
+         <div id="success-message" class="hidden mt-4 p-4 rounded-lg text-center" style="background: #d1fae5; border: 3px solid #10b981;">
+          <p class="text-2xl font-bold mb-2" style="color: #065f46;">¡Excelente trabajo! 🎉</p>
+          <p id="success-text" class="text-lg mb-3" style="color: #047857;">¡Urbabot recogió la basura!</p><!-- Medal Display -->
+          <div id="medal-earned" class="hidden medal-display">
+           <div class="medal-icon" id="medal-icon">
+            🥇
+           </div>
+           <div class="medal-info">
+            <div class="medal-title" id="medal-title">
+             ¡Medalla de Oro!
+            </div>
+            <div class="medal-description" id="medal-description">
+             Solución óptima con bucles anidados
+            </div>
+           </div>
+          </div><button id="next-level-btn" class="command-btn px-6 py-3 rounded-lg text-white font-bold text-lg" style="background: #10b981;"> SIGUIENTE NIVEL → </button>
+         </div><!-- Game Complete Message -->
+         <div id="complete-message" class="hidden mt-4 p-4 rounded-lg text-center" style="background: #fef3c7; border: 3px solid #f59e0b;">
+          <p class="text-3xl font-bold mb-2" style="color: #d97706;">🏆 ¡FELICITACIONES! 🏆</p>
+          <p class="text-xl mb-3" style="color: #b45309;">¡Completaste todos los retos!</p>
+          <p class="text-lg" style="color: #92400e;">Eres un experto en programación con Urbabot</p>
+         </div><!-- Failed Attempt Message -->
+         <div id="failed-message" class="hidden mt-4 p-4 rounded-lg text-center" style="background: #fef3c7; border: 3px solid #f59e0b;">
+          <p class="text-2xl font-bold mb-2" style="color: #d97706;">😅 ¡Ups!</p>
+          <p id="failed-text" class="text-lg mb-3" style="color: #b45309;">Aquí no hay basura. ¡Vuelve a intentarlo!</p>
+          <p class="text-base" style="color: #92400e;">Recuerda revisar bien la posición de la basura 🗑️</p>
+         </div>
+        </div><!-- Command Sequence Display -->
+        <div class="bg-white rounded-lg p-3 shadow-lg">
+         <div class="flex justify-between items-center mb-2">
+          <h4 class="text-lg font-bold" style="color: #0c4a6e;">📋 Secuencia de Comandos:</h4><button id="btn-clear" class="command-btn text-sm px-3 py-1 rounded-lg font-bold" style="background: #fee2e2; color: #991b1b;"> 🗑️ Limpiar Todo </button>
+         </div>
+         <div style="position: relative;">
+          <div id="command-sequence" class="min-h-24 p-3 rounded-lg border-2 flex flex-wrap gap-2 relative" style="background: #f0f9ff; border-color: #7dd3fc;">
+           <p class="text-center w-full text-gray-400">Haz clic en los botones para agregar comandos...</p>
+          </div>
+         </div>
+         <div id="repeat-tip" class="hidden mt-2 p-2 rounded text-center text-sm" style="background: #f3e8ff; color: #6b21a8;">
+          💡 <strong>Consejo:</strong> Agrega un comando, luego haz clic en REPETIR. ¡Haz clic en el número para cambiarlo!
+         </div>
+         <div id="bucle-tip" class="hidden mt-2 p-2 rounded text-center text-sm" style="background: #fce7f3; color: #9f1239;">
+          💡 <strong>Consejo:</strong> Usa <strong>( PARÉNTESIS ABRE</strong>, agrega comandos, luego <strong>) PARÉNTESIS CIERRA</strong>. Después usa <strong>🔢 REPETIR</strong> para ajustar las repeticiones del bucle.
+         </div>
+         <div id="bucles-avanzados-tip" class="hidden mt-2 p-2 rounded text-center text-sm" style="background: #fae8ff; color: #86198f;">
+          💡 <strong>Bucles Anidados:</strong> Primero haz clic en <strong>🔢 REPETIR</strong>, luego <strong>( PARÉNTESIS ABRE</strong>, agrega comandos (que pueden incluir otro REPETIR y ( ) ), y finalmente <strong>) PARÉNTESIS CIERRA</strong>. Ejemplo: <strong>REPETIR 3 ( REPETIR 2 ( ⬆️ ↶ ) ⬆️ )</strong> ¡Optimiza para ganar medallas! 🏅
+         </div>
+        </div>
+       </div>
+      </div><!-- Footer -->
+      <div class="mt-8 text-center pb-6">
+       <p class="text-lg font-semibold" style="color: #075985;">Profesor José Noé Sánchez Sierra</p><a href="https://elprofenoe.com" target="_blank" rel="noopener noreferrer" class="text-lg font-bold hover:underline" style="color: #0c4a6e;"> https://elprofenoe.com </a>
+      </div>
+     </div>
+    </div><!-- Instructions Modal -->
+    <div id="instructions-modal" class="modal-overlay hidden" onclick="closeInstructions(event)">
+     <div class="modal-content" onclick="event.stopPropagation()">
+      <h2 class="text-3xl font-bold mb-4 text-center" style="color: #0c4a6e;">📖 Cómo Jugar</h2>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🎯 Objetivo del Juego</h3>
+       <p class="text-lg mb-2">Ayuda a URbaBot a recoger la basura usando comandos de programación. URbaBot es un robot que limpia el mundo, ¡y tú eres su programador!</p>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🕹️ Controles</h3>
+       <div class="space-y-2">
+        <div class="flex items-center gap-3"><span class="text-2xl">⬆</span> <span class="font-bold" style="color: #2563eb;">AVANZAR:</span> <span>Mueve a URbaBot un paso hacia adelante</span>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-2xl">⬇</span> <span class="font-bold" style="color: #eab308;">RETROCEDER:</span> <span>Mueve a URbaBot un paso hacia atrás</span>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-2xl">↶</span> <span class="font-bold" style="color: #f97316;">GIRAR IZQ:</span> <span>Gira a URbaBot 90° a la izquierda</span>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-2xl">↷</span> <span class="font-bold" style="color: #a855f7;">GIRAR DER:</span> <span>Gira a URbaBot 90° a la derecha</span>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-2xl">🗑️</span> <span class="font-bold" style="color: #dc2626;">PICK UP:</span> <span>Recoge la basura (solo funciona en la casilla correcta)</span>
+        </div>
+        <div class="flex items-center gap-3"><span class="text-2xl">📦</span> <span class="font-bold" style="color: #059669;">DROP OFF:</span> <span>Deposita la basura en el contenedor (solo en niveles avanzados)</span>
+        </div>
+       </div>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">📝 Cómo Programar</h3>
+       <ol class="list-decimal list-inside space-y-2 text-lg">
+        <li>Haz clic en los botones de comandos para agregarlos a tu secuencia</li>
+        <li>Los comandos aparecerán en el área de "Secuencia de Comandos"</li>
+        <li>Puedes hacer clic en un comando para eliminarlo</li>
+        <li>Arrastra los comandos para cambiar su orden</li>
+        <li>Presiona "▶️ EJECUTAR" para ver a URbaBot seguir tus instrucciones</li>
+        <li>Si necesitas ajustar, presiona "🔄 REINICIAR" para volver al inicio sin borrar tu código</li>
+        <li>Para empezar de cero, usa "🗑️ LIMPIAR TODO"</li>
+       </ol>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">⚡ Control de Velocidad</h3>
+       <p class="text-lg mb-2">Sobre el escenario del juego encontrarás controles para ajustar la velocidad de ejecución:</p>
+       <ul class="list-disc list-inside space-y-1 text-lg ml-4">
+        <li><strong>🐢 Normal:</strong> Velocidad estándar (500ms entre movimientos) - Ideal para ver cada paso con claridad</li>
+        <li><strong>🚀 Turbo:</strong> Velocidad rápida (150ms entre movimientos) - Perfecto para probar algoritmos rápidamente</li>
+       </ul>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🔢 Repeticiones (Niveles Avanzados)</h3>
+       <p class="text-lg mb-2">En los niveles de repeticiones, puedes optimizar tu código:</p>
+       <ul class="list-disc list-inside space-y-1 text-lg ml-4">
+        <li>Primero agrega un comando (por ejemplo: ⬆ AVANZAR)</li>
+        <li>Luego haz clic en el botón <strong>🔢 REPETIR</strong></li>
+        <li>Aparecerá un panel para configurar cuántas veces repetir (2-9 veces)</li>
+        <li>En la secuencia verás: ⬆ seguido de 🔢 con un número en un círculo</li>
+        <li>Haz clic en el 🔢 para cambiar el número de repeticiones</li>
+        <li>Ejemplo: ⬆ + 🔢 5 = caminar 5 pasos adelante</li>
+       </ul>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🔄 Bucles Sencillos (Nivel Experto)</h3>
+       <p class="text-lg mb-2">En "Bucles Sencillos" aprenderás a repetir <strong>secuencias completas</strong>:</p>
+       <ul class="list-disc list-inside space-y-1 text-lg ml-4">
+        <li>Agrega varios comandos seguidos (por ejemplo: ⬆ AVANZAR, ↷ GIRAR DER)</li>
+        <li>Luego usa <strong>🔢 REPETIR</strong> para repetir toda esa secuencia</li>
+        <li>Ejemplo: (⬆ + ↷) + 🔢 4 = hacer un cuadrado</li>
+        <li>¡Es como crear una función que puedes reutilizar!</li>
+        <li>Aprenderás patrones como escalones, zigzags y espirales</li>
+       </ul>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🔄🔄 Bucles Avanzados (Maestro)</h3>
+       <p class="text-lg mb-2">En "Bucles Avanzados" dominarás los <strong>bucles anidados</strong>:</p>
+       <ul class="list-disc list-inside space-y-1 text-lg ml-4">
+        <li>Crea bucles DENTRO de otros bucles para patrones geométricos</li>
+        <li>Ejemplo: <strong>( ( ⬆ ↶ ) ×3 ⬆ ) ×4</strong> = cuadrícula 3×3</li>
+        <li>Recoge basura en patrones: cuadrados, rectángulos, espirales</li>
+        <li><strong>🏅 Sistema de Medallas:</strong> Optimiza tu código para ganar medallas</li>
+        <li>🥇 <strong>ORO:</strong> Solución óptima con pocos comandos</li>
+        <li>🥈 <strong>PLATA:</strong> Solución eficiente</li>
+        <li>🥉 <strong>BRONCE:</strong> Solución funcional</li>
+       </ul>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🚧 Obstáculos</h3>
+       <p class="text-lg">URbaBot no puede atravesar obstáculos (🚧). Debes planear tu ruta para evitarlos.</p>
+      </div>
+      <div class="mb-6">
+       <h3 class="text-xl font-bold mb-2" style="color: #0284c7;">🎮 Tipos de Ejercicios</h3>
+       <p class="text-lg mb-2"><strong>Secuencias Sencillas:</strong> Aprende los comandos básicos y crea tu primera secuencia de programación.</p>
+       <p class="text-lg mb-2"><strong>Secuencias:</strong> Recoge la basura y deposítala en el contenedor adecuado. ¡Una introducción a la clasificación de residuos!</p>
+       <p class="text-lg mb-2"><strong>Repeticiones:</strong> Resuelve los mismos retos que "Secuencias Sencillas" pero usando repeticiones para optimizar tu código y usar menos comandos.</p>
+       <p class="text-lg mb-2"><strong>Repeticiones 2:</strong> Los mismos desafíos que "Secuencias" pero optimizados con repeticiones.</p>
+       <p class="text-lg mb-2"><strong>Bucles Sencillos:</strong> ¡El siguiente nivel! Aprende a repetir secuencias completas de comandos, como si fueran funciones.</p>
+       <p class="text-lg mb-2"><strong>Bucles Avanzados:</strong> ¡Conviértete en maestro! Usa bucles anidados para crear patrones geométricos complejos y gana medallas.</p>
+       <p class="text-lg mb-2"><strong>Próximamente:</strong> Condicionales, funciones y más desafíos para convertirte en un experto programador.</p>
+      </div>
+      <div class="text-center"><button onclick="closeInstructionsButton()" class="command-btn px-6 py-3 rounded-lg text-white font-bold text-lg" style="background: #22c55e;"> ¡ENTENDIDO! 🎮 </button>
+      </div>
+     </div>
+    </div>
+   </div>
+   <script>
+    const defaultConfig = {
+      game_title: "Pensamiento Computacional con URbaBot",
+      instruction_text: "Selecciona un ejercicio del menú principal o haz clic en INSTRUCCIONES para aprender a jugar",
+      forward_label: "AVANZAR",
+      backward_label: "RETROCEDER",
+      left_label: "GIRAR IZQ",
+      right_label: "GIRAR DER",
+      pickup_label: "PICK UP",
+      dropoff_label: "DROP OFF",
+      run_label: "EJECUTAR",
+      reset_label: "REINICIAR",
+      primary_color: "#0c4a6e",
+      secondary_color: "#0284c7",
+      action_color: "#16a34a",
+      background_color: "#e0f2fe"
+    };
+
+    const levels = [
+      { grid: 5, start: [2, 0], trash: [2, 4], direction: 'right', description: 'Nivel 1: Primer paso', obstacles: [] },
+      { grid: 5, start: [0, 0], trash: [0, 4], direction: 'right', description: 'Nivel 2: Camino recto', obstacles: [[0, 2]] },
+      { grid: 5, start: [4, 4], trash: [0, 4], direction: 'up', description: 'Nivel 3: Hacia arriba', obstacles: [[2, 4]] },
+      { grid: 6, start: [0, 0], trash: [3, 3], direction: 'right', description: 'Nivel 4: Primera curva', obstacles: [[1, 1], [2, 2]] },
+      { grid: 6, start: [5, 0], trash: [5, 5], direction: 'right', description: 'Nivel 5: Giro a la derecha', obstacles: [[5, 2], [5, 3]] },
+      { grid: 6, start: [0, 5], trash: [5, 5], direction: 'down', description: 'Nivel 6: Camino en L', obstacles: [[2, 5], [3, 5]] },
+      { grid: 7, start: [0, 0], trash: [3, 6], direction: 'right', description: 'Nivel 7: Zigzag simple', obstacles: [[1, 2], [2, 4]] },
+      { grid: 7, start: [6, 0], trash: [0, 6], direction: 'right', description: 'Nivel 8: Esquina lejana', obstacles: [[6, 3], [4, 3], [2, 4]] },
+      { grid: 8, start: [0, 0], trash: [7, 7], direction: 'right', description: 'Nivel 9: Gran diagonal', obstacles: [[2, 2], [4, 4], [6, 6]] },
+      { grid: 8, start: [4, 4], trash: [0, 0], direction: 'up', description: 'Nivel 10: Desafío final', obstacles: [[3, 3], [2, 2], [1, 1], [4, 2], [2, 4]] }
+    ];
+
+    const levelsAdvanced = [
+      { grid: 5, start: [0, 0], trash: [4, 0], container: [4, 4], direction: 'right', description: 'Nivel 1: Primer recorrido', obstacles: [[2, 0]] },
+      { grid: 5, start: [0, 0], trash: [0, 4], container: [4, 4], direction: 'right', description: 'Nivel 2: Camino en L', obstacles: [[1, 2], [2, 2]] },
+      { grid: 6, start: [0, 0], trash: [5, 0], container: [0, 5], direction: 'right', description: 'Nivel 3: Ida y vuelta', obstacles: [[3, 0], [0, 3]] },
+      { grid: 6, start: [3, 3], trash: [0, 0], container: [5, 5], direction: 'up', description: 'Nivel 4: Desde el centro', obstacles: [[1, 1], [4, 4]] },
+      { grid: 6, start: [0, 0], trash: [3, 0], container: [5, 5], direction: 'right', description: 'Nivel 5: Ruta diagonal', obstacles: [[3, 1], [3, 2], [3, 3]] },
+      { grid: 6, start: [0, 5], trash: [5, 5], container: [5, 0], direction: 'right', description: 'Nivel 6: Tres esquinas', obstacles: [[2, 5], [5, 3]] },
+      { grid: 6, start: [3, 0], trash: [0, 3], container: [5, 3], direction: 'left', description: 'Nivel 7: Zigzag completo', obstacles: [[1, 1], [3, 3], [4, 2]] },
+      { grid: 6, start: [0, 0], trash: [5, 2], container: [0, 5], direction: 'right', description: 'Nivel 8: Camino bloqueado', obstacles: [[3, 0], [3, 1], [3, 2], [3, 3]] },
+      { grid: 6, start: [5, 5], trash: [0, 0], container: [5, 0], direction: 'up', description: 'Nivel 9: Laberinto', obstacles: [[2, 2], [2, 3], [3, 2], [3, 3]] },
+      { grid: 6, start: [3, 3], trash: [0, 5], container: [5, 0], direction: 'left', description: 'Nivel 10: Desafío maestro', obstacles: [[1, 3], [3, 1], [4, 4], [2, 5], [5, 2]] }
+    ];
+
+    const levelsRepetitions = [
+      { grid: 5, start: [2, 0], trash: [2, 4], direction: 'right', description: 'Nivel 1: Primer paso', obstacles: [] },
+      { grid: 5, start: [0, 0], trash: [0, 4], direction: 'right', description: 'Nivel 2: Camino recto', obstacles: [[0, 2]] },
+      { grid: 5, start: [4, 4], trash: [0, 4], direction: 'up', description: 'Nivel 3: Hacia arriba', obstacles: [[2, 4]] },
+      { grid: 6, start: [0, 0], trash: [3, 3], direction: 'right', description: 'Nivel 4: Primera curva', obstacles: [[1, 1], [2, 2]] },
+      { grid: 6, start: [5, 0], trash: [5, 5], direction: 'right', description: 'Nivel 5: Giro a la derecha', obstacles: [[5, 2], [5, 3]] },
+      { grid: 6, start: [0, 5], trash: [5, 5], direction: 'down', description: 'Nivel 6: Camino en L', obstacles: [[2, 5], [3, 5]] },
+      { grid: 7, start: [0, 0], trash: [3, 6], direction: 'right', description: 'Nivel 7: Zigzag simple', obstacles: [[1, 2], [2, 4]] },
+      { grid: 7, start: [6, 0], trash: [0, 6], direction: 'right', description: 'Nivel 8: Esquina lejana', obstacles: [[6, 3], [4, 3], [2, 4]] },
+      { grid: 8, start: [0, 0], trash: [7, 7], direction: 'right', description: 'Nivel 9: Gran diagonal', obstacles: [[2, 2], [4, 4], [6, 6]] },
+      { grid: 8, start: [4, 4], trash: [0, 0], direction: 'up', description: 'Nivel 10: Desafío final', obstacles: [[3, 3], [2, 2], [1, 1], [4, 2], [2, 4]] }
+    ];
+
+    const levelsRepetitions2 = [
+      { grid: 5, start: [0, 0], trash: [4, 0], container: [4, 4], direction: 'right', description: 'Nivel 1: Primer recorrido', obstacles: [[2, 0]] },
+      { grid: 5, start: [0, 0], trash: [0, 4], container: [4, 4], direction: 'right', description: 'Nivel 2: Camino en L', obstacles: [[1, 2], [2, 2]] },
+      { grid: 6, start: [0, 0], trash: [5, 0], container: [0, 5], direction: 'right', description: 'Nivel 3: Ida y vuelta', obstacles: [[3, 0], [0, 3]] },
+      { grid: 6, start: [3, 3], trash: [0, 0], container: [5, 5], direction: 'up', description: 'Nivel 4: Desde el centro', obstacles: [[1, 1], [4, 4]] },
+      { grid: 6, start: [0, 0], trash: [3, 0], container: [5, 5], direction: 'right', description: 'Nivel 5: Ruta diagonal', obstacles: [[3, 1], [3, 2], [3, 3]] },
+      { grid: 6, start: [0, 5], trash: [5, 5], container: [5, 0], direction: 'right', description: 'Nivel 6: Tres esquinas', obstacles: [[2, 5], [5, 3]] },
+      { grid: 6, start: [3, 0], trash: [0, 3], container: [5, 3], direction: 'left', description: 'Nivel 7: Zigzag completo', obstacles: [[1, 1], [3, 3], [4, 2]] },
+      { grid: 6, start: [0, 0], trash: [5, 2], container: [0, 5], direction: 'right', description: 'Nivel 8: Camino bloqueado', obstacles: [[3, 0], [3, 1], [3, 2], [3, 3]] },
+      { grid: 6, start: [5, 5], trash: [0, 0], container: [5, 0], direction: 'up', description: 'Nivel 9: Laberinto', obstacles: [[2, 2], [2, 3], [3, 2], [3, 3]] },
+      { grid: 6, start: [3, 3], trash: [0, 5], container: [5, 0], direction: 'left', description: 'Nivel 10: Desafío maestro', obstacles: [[1, 3], [3, 1], [4, 4], [2, 5], [5, 2]] }
+    ];
+
+    const levelsBucles = [
+      { 
+        grid: 6, 
+        start: [0, 0], 
+        trashMultiple: [[1, 1], [2, 2], [3, 3], [4, 4]], 
+        direction: 'right', 
+        description: 'Nivel 1: Diagonal sencilla - Recoge 4 botes en diagonal', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [0, 5], 
+        trashMultiple: [[1, 4], [2, 3], [3, 2], [4, 1]], 
+        direction: 'right', 
+        description: 'Nivel 2: Diagonal desde abajo - Recoge 4 botes', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [5, 0], 
+        trashMultiple: [[4, 1], [3, 2], [2, 3], [1, 4]], 
+        direction: 'down', 
+        description: 'Nivel 3: Diagonal desde arriba derecha - Recoge 4 botes', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [5, 5], 
+        trashMultiple: [[4, 4], [3, 3], [2, 2], [1, 1]], 
+        direction: 'up', 
+        description: 'Nivel 4: Diagonal desde abajo derecha - Recoge 4 botes', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [0, 0], 
+        trashMultiple: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5]], 
+        direction: 'right', 
+        description: 'Nivel 5: Diagonal larga - Recoge 5 botes', 
+        obstacles: [] 
+      },
+      { 
+        grid: 7, 
+        start: [0, 3], 
+        trashMultiple: [[1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [6, 3]], 
+        direction: 'right', 
+        description: 'Nivel 6: Línea horizontal - Recoge 6 botes en línea', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [3, 0], 
+        trashMultiple: [[3, 1], [3, 2], [3, 3], [3, 4], [3, 5]], 
+        direction: 'down', 
+        description: 'Nivel 7: Línea vertical - Recoge 5 botes en línea', 
+        obstacles: [] 
+      },
+      { 
+        grid: 6, 
+        start: [0, 0], 
+        trashMultiple: [[1, 0], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2]], 
+        direction: 'right', 
+        description: 'Nivel 8: Escalera - Recoge 6 botes formando escalones', 
+        obstacles: [] 
+      },
+      { 
+        grid: 7, 
+        start: [0, 0], 
+        trashMultiple: [[1, 0], [2, 0], [3, 0], [3, 1], [3, 2], [3, 3], [2, 3], [1, 3], [0, 3]], 
+        direction: 'right', 
+        description: 'Nivel 9: Letra "U" - Recoge 9 botes formando U', 
+        obstacles: [] 
+      },
+      { 
+        grid: 8, 
+        start: [0, 0], 
+        trashMultiple: [[1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [6, 3]], 
+        direction: 'right', 
+        description: 'Nivel 10: Rectángulo grande - Recoge 14 botes', 
+        obstacles: [] 
+      }
+    ];
+
+    const levelsBuclesAvanzados = [
+      {
+        grid: 7,
+        start: [1, 0],
+        trashMultiple: [[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [2, 4], [3, 4], [4, 4], [4, 3], [4, 2], [4, 1], [3, 1], [2, 1]],
+        direction: 'down',
+        description: 'Nivel 1: Cuadrado 4×4 (13 botes) - 📖Tutorial con solución!',
+        obstacles: [],
+        medalTargets: { gold: 10, silver: 15, bronze: 24 },
+        showSolution: true,
+        preloadedSolution: []
+      },
+      {
+        grid: 6,
+        start: [0, 0],
+        trashMultiple: [[0, 1], [0, 2], [1, 2], [2, 2], [2, 1], [2, 0], [1, 0]],
+        direction: 'down',
+        description: 'Nivel 2: Cuadrado pequeño 3×3 - Practica el patrón',
+        obstacles: [],
+        medalTargets: { gold: 8, silver: 12, bronze: 18 }
+      },
+      {
+        grid: 7,
+        start: [0, 0],
+        trashMultiple: [[0, 1], [0, 2], [0, 3], [1, 3], [2, 3], [3, 3], [3, 2], [3, 1], [3, 0], [2, 0], [1, 0]],
+        direction: 'down',
+        description: 'Nivel 3: Rectángulo 4×4 horizontal',
+        obstacles: [],
+        medalTargets: { gold: 8, silver: 12, bronze: 20 }
+      },
+      {
+        grid: 7,
+        start: [3, 3],
+        trashMultiple: [[3, 4], [3, 5], [3, 6], [4, 6], [5, 6], [6, 6], [6, 5], [6, 4], [6, 3], [5, 3], [4, 3]],
+        direction: 'down',
+        description: 'Nivel 4: Cuadrado desde otra posición',
+        obstacles: [],
+        medalTargets: { gold: 8, silver: 12, bronze: 20 }
+      },
+      {
+        grid: 8,
+        start: [1, 1],
+        trashMultiple: [[1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6], [6, 6], [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [5, 1], [4, 1], [3, 1], [2, 1]],
+        direction: 'down',
+        description: 'Nivel 5: Cuadrado grande 6×6',
+        obstacles: [],
+        medalTargets: { gold: 8, silver: 12, bronze: 25 }
+      },
+      {
+        grid: 7,
+        start: [0, 0],
+        trashMultiple: [[1, 1], [2, 1], [3, 1], [1, 2], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3]],
+        direction: 'right',
+        description: 'Nivel 6: Cuadrícula rellena 3×3',
+        obstacles: [],
+        medalTargets: { gold: 10, silver: 15, bronze: 25 }
+      },
+      {
+        grid: 8,
+        start: [0, 0],
+        trashMultiple: [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [2, 2], [3, 2], [4, 2], [1, 3], [2, 3], [3, 3], [4, 3]],
+        direction: 'right',
+        description: 'Nivel 7: Rectángulo relleno 4×3',
+        obstacles: [],
+        medalTargets: { gold: 10, silver: 15, bronze: 25 }
+      },
+      {
+        grid: 9,
+        start: [1, 1],
+        trashMultiple: [
+          [2, 2], [3, 2], [4, 2], [5, 2], [6, 2],
+          [2, 3], [3, 3], [4, 3], [5, 3], [6, 3],
+          [2, 4], [3, 4], [4, 4], [5, 4], [6, 4],
+          [2, 5], [3, 5], [4, 5], [5, 5], [6, 5],
+          [2, 6], [3, 6], [4, 6], [5, 6], [6, 6]
+        ],
+        direction: 'right',
+        description: 'Nivel 8: Cuadrícula rellena 5×5',
+        obstacles: [],
+        medalTargets: { gold: 10, silver: 16, bronze: 30 }
+      },
+      {
+        grid: 9,
+        start: [4, 4],
+        trashMultiple: [
+          [2, 2], [3, 2], [4, 2], [5, 2], [6, 2],
+          [2, 3], [6, 3],
+          [2, 4], [6, 4],
+          [2, 5], [6, 5],
+          [2, 6], [3, 6], [4, 6], [5, 6], [6, 6]
+        ],
+        direction: 'up',
+        description: 'Nivel 9: Marco rectangular hueco avanzado',
+        obstacles: [],
+        medalTargets: { gold: 16, silver: 22, bronze: 35 }
+      },
+      {
+        grid: 10,
+        start: [1, 1],
+        trashMultiple: [
+          [2, 2], [3, 2], [4, 2], [5, 2], [6, 2], [7, 2],
+          [2, 3], [7, 3],
+          [2, 4], [7, 4],
+          [2, 5], [3, 5], [4, 5], [5, 5], [6, 5], [7, 5],
+          [2, 6], [7, 6],
+          [2, 7], [7, 7],
+          [2, 8], [3, 8], [4, 8], [5, 8], [6, 8], [7, 8]
+        ],
+        direction: 'right',
+        description: 'Nivel 10: Cuadrados anidados - ¡Desafío final!',
+        obstacles: [],
+        medalTargets: { gold: 20, silver: 30, bronze: 45 }
+      }
+    ];
+
+    let currentLevel = 0;
+    let robotPos = [0, 0];
+    let robotDir = 'right';
+    let commands = [];
+    let isRunning = false;
+    let currentMenu = 'secuencias';
+    let isCarryingTrash = false;
+    let currentLevels = levels;
+    let collectedTrash = [];
+    let executionSpeed = 500;
+
+    function showMenu() {
+      document.getElementById('main-menu').classList.remove('hidden');
+      const gameContainer = document.getElementById('game-container');
+      if (gameContainer) {
+        gameContainer.classList.add('hidden');
+      }
+      closeRepeatConfig();
+    }
+
+    function hideMenu() {
+      document.getElementById('main-menu').classList.add('hidden');
+      const gameContainer = document.getElementById('game-container');
+      if (gameContainer) {
+        gameContainer.classList.remove('hidden');
+      }
+    }
+
+    function selectMenu(menuType) {
+      currentMenu = menuType;
+      currentLevel = 0;
+      
+      if (menuType === 'secuencias') {
+        currentLevels = levels;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.add('hidden');
+        document.getElementById('bucle-tip').classList.add('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.add('hidden');
+        hideMenu();
+        showMenuTutorial('secuencias');
+        initLevel();
+      } else if (menuType === 'secuencias_avanzadas') {
+        currentLevels = levelsAdvanced;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.add('hidden');
+        document.getElementById('bucle-tip').classList.add('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.add('hidden');
+        hideMenu();
+        showMenuTutorial('secuencias_avanzadas');
+        initLevel();
+      } else if (menuType === 'repeticiones') {
+        currentLevels = levelsRepetitions;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.remove('hidden');
+        document.getElementById('bucle-tip').classList.add('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.add('hidden');
+        hideMenu();
+        showMenuTutorial('repeticiones');
+        initLevel();
+      } else if (menuType === 'repeticiones2') {
+        currentLevels = levelsRepetitions2;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.remove('hidden');
+        document.getElementById('bucle-tip').classList.add('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.add('hidden');
+        hideMenu();
+        showMenuTutorial('repeticiones2');
+        initLevel();
+      } else if (menuType === 'bucles') {
+        currentLevels = levelsBucles;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.add('hidden');
+        document.getElementById('bucle-tip').classList.remove('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.add('hidden');
+        hideMenu();
+        showMenuTutorial('bucles');
+        initLevel();
+      } else if (menuType === 'bucles_avanzados') {
+        currentLevels = levelsBuclesAvanzados;
+        document.getElementById('instruction-text').textContent = defaultConfig.instruction_text;
+        document.getElementById('repeat-tip').classList.add('hidden');
+        document.getElementById('bucle-tip').classList.add('hidden');
+        document.getElementById('bucles-avanzados-tip').classList.remove('hidden');
+        hideMenu();
+        showMenuTutorial('bucles_avanzados');
+        initLevel();
+      }
+    }
+
+    function openInstructions() {
+      document.getElementById('instructions-modal').classList.remove('hidden');
+    }
+
+    function showMenuTutorial(menuType) {
+      const tutorialContent = {
+        'secuencias': {
+          title: '🎓 Tutorial: Secuencias Sencillas',
+          description: 'Aprende los comandos básicos de programación',
+          content: `
+            <div style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 3px solid #2563eb; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #1e40af; font-size: 1.2rem;">
+                🎯 Objetivo: Guía a URbaBot hasta la basura y recógela
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #1e3a8a; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>📝 ¿Qué son las secuencias?</strong><br>
+                  Una secuencia es una serie de comandos que se ejecutan uno después del otro, en orden.
+                </p>
+                <p style="color: #1e3a8a; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🕹️ Comandos disponibles:</strong><br>
+                  • <strong>⬆ AVANZAR:</strong> Mueve a URbaBot un paso hacia adelante<br>
+                  • <strong>⬇ RETROCEDER:</strong> Mueve a URbaBot un paso hacia atrás<br>
+                  • <strong>↶ GIRAR IZQ:</strong> Gira a URbaBot 90° a la izquierda<br>
+                  • <strong>↷ GIRAR DER:</strong> Gira a URbaBot 90° a la derecha<br>
+                  • <strong>🗑️ PICK UP:</strong> Recoge la basura (solo cuando estés en la casilla correcta)
+                </p>
+                <p style="color: #1e3a8a; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>💡 Ejemplo de secuencia:</strong><br>
+                  ⬆ ⬆ ⬆ ↷ ⬆ 🗑️
+                </p>
+                <p style="color: #1e3a8a; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • Cuando URbaBot está sobre basura, verás un fondo dorado brillante 🟡<br>
+                  • Planea tu ruta antes de programar<br>
+                  �� Evita los obstáculos 🚧<br>
+                  • Usa REINICIAR para probar sin borrar tu código
+                </p>
+              </div>
+            </div>
+          `
+        },
+        'secuencias_avanzadas': {
+          title: '🎓 Tutorial: Secuencias Avanzadas',
+          description: 'Recoge la basura y llévala al contenedor',
+          content: `
+            <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #16a34a; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #14532d; font-size: 1.2rem;">
+                🎯 Objetivo: Recoge la basura y deposítala en el contenedor
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #14532d; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>📦 Nuevo comando disponible:</strong><br>
+                  • <strong>📦 DROP OFF:</strong> Deposita la basura en el contenedor (solo cuando tengas basura y estés en el contenedor)
+                </p>
+                <p style="color: #14532d; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🔄 Flujo completo:</strong><br>
+                  1. Navega hasta donde está la basura 🗑️<br>
+                  2. Usa <strong>🗑️ PICK UP</strong> para recogerla<br>
+                  3. Navega hasta el contenedor 📦<br>
+                  4. Usa <strong>📦 DROP OFF</strong> para depositarla
+                </p>
+                <p style="color: #14532d; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>💡 Ejemplo completo:</strong><br>
+                  ⬆ ⬆ 🗑️ ↷ ⬆ ⬆ ↷ ⬆ 📦
+                </p>
+                <p style="color: #14532d; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • Planea dos rutas: una hacia la basura y otra al contenedor<br>
+                  • URbaBot puede cargar solo un bote de basura a la vez<br>
+                  • Más obstáculos = más desafío 🚧
+                </p>
+              </div>
+            </div>
+          `
+        },
+        'repeticiones': {
+          title: '🎓 Tutorial: Repeticiones',
+          description: 'Optimiza tu código con repeticiones',
+          content: `
+            <div style="background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); border: 3px solid #8b5cf6; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #6b21a8; font-size: 1.2rem;">
+                🎯 Objetivo: Resuelve los mismos retos pero con menos comandos
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #6b21a8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🔢 ¿Qué son las repeticiones?</strong><br>
+                  Las repeticiones te permiten ejecutar el mismo comando múltiples veces sin escribirlo repetidamente. ¡Haz más con menos!
+                </p>
+                <p style="color: #6b21a8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>📝 Cómo usar REPETIR:</strong><br>
+                  1. Agrega un comando (ejemplo: ⬆ AVANZAR)<br>
+                  2. Haz clic en el botón <strong>🔢 REPETIR</strong><br>
+                  3. Aparecerá un panel para elegir cuántas veces (2-9)<br>
+                  4. Haz clic en el número para cambiarlo después
+                </p>
+                <p style="color: #6b21a8; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>💡 Ejemplo de optimización:</strong><br>
+                  <span style="color: #dc2626;">❌ Sin repetir:</span> ⬆ ⬆ ⬆ ⬆ ⬆ (5 comandos)<br>
+                  <span style="color: #16a34a;">✅ Con repetir:</span> ⬆ 🔢5 (2 comandos)
+                </p>
+                <p style="color: #6b21a8; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • Busca patrones repetitivos en tu solución<br>
+                  • Puedes usar REPETIR con cualquier comando<br>
+                  • ¡Es el primer paso hacia la programación eficiente!
+                </p>
+              </div>
+            </div>
+          `
+        },
+        'repeticiones2': {
+          title: '🎓 Tutorial: Repeticiones 2',
+          description: 'Optimiza secuencias completas con repeticiones',
+          content: `
+            <div style="background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%); border: 3px solid #7c3aed; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #5b21b6; font-size: 1.2rem;">
+                🎯 Objetivo: Recoge y deposita basura usando repeticiones
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #5b21b6; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🔢 Optimiza tus rutas:</strong><br>
+                  Ahora debes recoger la basura Y llevarla al contenedor, pero usando repeticiones para hacer tu código más eficiente.
+                </p>
+                <p style="color: #5b21b6; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>💡 Ejemplo completo optimizado:</strong><br>
+                  <span style="color: #dc2626;">❌ Sin repetir:</span> ⬆ ⬆ ⬆ 🗑️ ↷ ⬆ ⬆ ⬆ 📦 (8 comandos)<br>
+                  <span style="color: #16a34a;">✅ Con repetir:</span> ⬆ 🔢3 🗑️ ↷ ⬆ 🔢3 📦 (6 comandos)
+                </p>
+                <p style="color: #5b21b6; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • Identifica movimientos repetitivos en ambas rutas<br>
+                  • Puedes usar múltiples REPETIR en la misma secuencia<br>
+                  • Combina repeticiones con giros para rutas complejas
+                </p>
+              </div>
+            </div>
+          `
+        },
+        'bucles': {
+          title: '🎓 Tutorial: Bucles Sencillos',
+          description: 'Repite secuencias completas de comandos',
+          content: `
+            <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); border: 3px solid #ec4899; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #9f1239; font-size: 1.2rem;">
+                🎯 Objetivo: Usa bucles para crear patrones complejos
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #9f1239; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🔄 ¿Qué son los bucles?</strong><br>
+                  Los bucles te permiten repetir SECUENCIAS COMPLETAS de comandos. Es como decir "haz esto 4 veces".
+                </p>
+                <p style="color: #9f1239; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>📝 Cómo crear un bucle:</strong><br>
+                  1. Haz clic en <strong>🔢 REPETIR</strong> (elige cuántas veces: 2-9)<br>
+                  2. Haz clic en <strong>( PARÉNTESIS ABRE</strong><br>
+                  3. Agrega tus comandos (ejemplo: ⬆ ↶)<br>
+                  4. Haz clic en <strong>) PARÉNTESIS CIERRA</strong>
+                </p>
+                <p style="color: #9f1239; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>💡 Ejemplo de bucle:</strong><br>
+                  <strong>REPETIR 4 VECES ( ⬆ 🗑️ ↶ )</strong><br>
+                  Esto hace un cuadrado recogiendo basura en cada esquina
+                </p>
+                <p style="color: #9f1239; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • Los bucles son perfectos para patrones geométricos<br>
+                  • Puedes poner varios comandos dentro del bucle<br>
+                  • Haz clic en el número 🔢 para cambiar las repeticiones
+                </p>
+              </div>
+            </div>
+          `
+        },
+        'bucles_avanzados': {
+          title: '🎓 Tutorial: Bucles Avanzados',
+          description: 'Domina los bucles anidados y gana medallas',
+          content: `
+            <div style="background: linear-gradient(135deg, #fae8ff 0%, #f3e8ff 100%); border: 3px solid #c026d3; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+              <div class="text-center font-bold mb-3" style="color: #86198f; font-size: 1.2rem;">
+                🎯 Objetivo: Usa bucles anidados para optimizar y ganar medallas
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                <p style="color: #86198f; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🔄🔄 ¿Qué son los bucles anidados?</strong><br>
+                  Son bucles DENTRO de otros bucles. Perfectos para patrones geométricos como cuadrículas, rectángulos y espirales.
+                </p>
+                <p style="color: #86198f; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>📝 Estructura de bucles anidados:</strong><br>
+                  <strong>REPETIR 4 ( REPETIR 3 ( ⬆ 🗑️ ) ↶ )</strong><br>
+                  • Bucle exterior: repite 4 veces (4 lados)<br>
+                  • Bucle interior: repite 3 veces (3 botes por lado)<br>
+                  • Resultado: ¡Recoge 12 botes en un cuadrado!
+                </p>
+                <p style="color: #86198f; font-size: 0.95rem; line-height: 1.6; margin-bottom: 8px;">
+                  <strong>🏅 Sistema de Medallas:</strong><br>
+                  🥇 <strong>ORO:</strong> Solución óptima (muy pocos comandos)<br>
+                  🥈 <strong>PLATA:</strong> Solución eficiente (buen número de comandos)<br>
+                  🥉 <strong>BRONCE:</strong> Solución funcional (funciona pero puede optimizarse)
+                </p>
+                <p style="color: #86198f; font-size: 0.85rem; line-height: 1.5;">
+                  <strong>✨ Consejos:</strong><br>
+                  • El nivel 1 tiene un tutorial completo con la solución<br>
+                  �� Busca patrones que se repiten en filas Y columnas<br>
+                  • Menos comandos = mejor medalla 🏆
+                </p>
+              </div>
+            </div>
+          `
+        }
+      };
+
+      const tutorial = tutorialContent[menuType];
+      if (!tutorial) return;
+
+      const modal = document.createElement('div');
+      modal.id = 'menu-tutorial-modal';
+      modal.className = 'modal-overlay';
+      modal.style.zIndex = '2000';
+      modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px;" onclick="event.stopPropagation()">
+          <h2 class="text-3xl font-bold mb-3 text-center" style="color: #0c4a6e;">${tutorial.title}</h2>
+          <p class="text-center text-lg mb-4" style="color: #075985;">${tutorial.description}</p>
+          ${tutorial.content}
+          <div class="text-center">
+            <button onclick="closeMenuTutorial()" class="command-btn px-8 py-3 rounded-lg text-white font-bold text-lg" style="background: #22c55e;">
+              ¡ENTENDIDO! 🚀 EMPEZAR
+            </button>
+          </div>
+        </div>
+      `;
+
+      modal.onclick = (e) => {
+        if (e.target.id === 'menu-tutorial-modal') {
+          closeMenuTutorial();
+        }
+      };
+
+      document.body.appendChild(modal);
+    }
+
+    function closeMenuTutorial() {
+      const modal = document.getElementById('menu-tutorial-modal');
+      if (modal) {
+        modal.remove();
+      }
+    }
+
+    function reopenMenuTutorial() {
+      closeMenuTutorial();
+      showMenuTutorial(currentMenu);
+    }
+
+    function closeInstructions(event) {
+      if (event.target.id === 'instructions-modal') {
+        document.getElementById('instructions-modal').classList.add('hidden');
+      }
+    }
+
+    function closeInstructionsButton() {
+      document.getElementById('instructions-modal').classList.add('hidden');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      showMenu();
+    });
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playStepSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 400;
+      oscillator.type = 'sine';
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.1);
+    }
+    
+    function playRotateSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.value = 300;
+      oscillator.type = 'square';
+      
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.15);
+    }
+    
+    function playSuccessSound() {
+      const notes = [523.25, 659.25, 783.99];
+      notes.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        
+        const startTime = audioContext.currentTime + (index * 0.15);
+        gainNode.gain.setValueAtTime(0.3, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.3);
+      });
+    }
+    
+    function playFailSound() {
+      const notes = [400, 350];
+      notes.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'triangle';
+        
+        const startTime = audioContext.currentTime + (index * 0.2);
+        gainNode.gain.setValueAtTime(0.2, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.25);
+      });
+    }
+
+    function playMedalSound() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine';
+        
+        const startTime = audioContext.currentTime + (index * 0.12);
+        gainNode.gain.setValueAtTime(0.3, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.25);
+      });
+    }
+
+    const directions = {
+      'up': [0, -1],
+      'down': [0, 1],
+      'left': [-1, 0],
+      'right': [1, 0]
+    };
+
+    const directionRotations = {
+      'down': 0,
+      'left': 90,
+      'up': 180,
+      'right': 270
+    };
+
+    function createRobotSVG(direction) {
+      const rotation = directionRotations[direction];
+      return `
+        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform: rotate(${rotation}deg);">
+          <img src="https://i.imgur.com/wC3Mpyo.png" 
+               alt="Urbabot" 
+               style="width: 85%; height: 85%; object-fit: contain;"
+               onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'background: #0284c7; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;\\'>🤖</div>';">
+        </div>
+      `;
+    }
+
+    function createTrashSVG() {
+      return `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="25" y="35" width="50" height="55" rx="5" fill="#84cc16"/>
+          <rect x="30" y="25" width="40" height="15" rx="3" fill="#65a30d"/>
+          <ellipse cx="50" cy="25" rx="22" ry="5" fill="#4d7c0f"/>
+          <rect x="45" y="15" width="10" height="12" rx="2" fill="#65a30d"/>
+          <text x="50" y="70" font-size="30" text-anchor="middle" fill="#ffffff">♻️</text>
+        </svg>
+      `;
+    }
+
+    function createContainerSVG() {
+      return `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="15" y="30" width="70" height="60" rx="8" fill="#059669"/>
+          <rect x="20" y="20" width="60" height="15" rx="4" fill="#047857"/>
+          <ellipse cx="50" cy="20" rx="32" ry="6" fill="#065f46"/>
+          <rect x="42" y="10" width="16" height="12" rx="3" fill="#047857"/>
+          <text x="50" y="68" font-size="35" text-anchor="middle" fill="#ffffff">📦</text>
+        </svg>
+      `;
+    }
+
+    function countExpandedCommands(commandList) {
+      let count = 0;
+      for (let i = 0; i < commandList.length; i++) {
+        const cmd = commandList[i];
+        if (cmd.type === 'repeat') {
+          continue;
+        } else if (cmd.type === 'loop') {
+          continue;
+        } else {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    let medalTargetsCollapsed = false;
+
+    function toggleMedalTargets() {
+      medalTargetsCollapsed = !medalTargetsCollapsed;
+      const content = document.getElementById('medal-targets-content');
+      const button = document.getElementById('btn-toggle-medal-targets');
+      
+      if (medalTargetsCollapsed) {
+        content.style.display = 'none';
+        button.textContent = '▶ Mostrar';
+      } else {
+        content.style.display = 'block';
+        button.textContent = '▼ Ocultar';
+      }
+    }
+
+    function updateMedalTargets() {
+      const level = currentLevels[currentLevel];
+      
+      if (currentMenu === 'bucles_avanzados' && level.medalTargets) {
+        document.getElementById('medal-targets-display').classList.remove('hidden');
+        document.getElementById('gold-count').textContent = level.medalTargets.gold;
+        document.getElementById('silver-count').textContent = level.medalTargets.silver;
+        document.getElementById('bronze-count').textContent = level.medalTargets.bronze;
+        
+        const commandCount = countExpandedCommands(commands);
+        document.getElementById('current-command-count').textContent = commandCount;
+        
+        const goldTarget = document.getElementById('gold-target');
+        const silverTarget = document.getElementById('silver-target');
+        const bronzeTarget = document.getElementById('bronze-target');
+        
+        goldTarget.classList.remove('achieved');
+        silverTarget.classList.remove('achieved');
+        bronzeTarget.classList.remove('achieved');
+        
+        if (commandCount <= level.medalTargets.gold) {
+          goldTarget.classList.add('achieved');
+        }
+        if (commandCount <= level.medalTargets.silver) {
+          silverTarget.classList.add('achieved');
+        }
+        if (commandCount <= level.medalTargets.bronze) {
+          bronzeTarget.classList.add('achieved');
+        }
+      } else {
+        document.getElementById('medal-targets-display').classList.add('hidden');
+      }
+    }
+
+    function showMedalEarned(commandCount) {
+      const level = currentLevels[currentLevel];
+      
+      if (!level.medalTargets) return;
+      
+      const medalDisplay = document.getElementById('medal-earned');
+      const medalIcon = document.getElementById('medal-icon');
+      const medalTitle = document.getElementById('medal-title');
+      const medalDescription = document.getElementById('medal-description');
+      
+      let medal = null;
+      
+      if (commandCount <= level.medalTargets.gold) {
+        medal = {
+          icon: '🥇',
+          title: '¡Medalla de Oro!',
+          description: `Solución óptima con ${commandCount} comandos. ¡Eres un maestro!`
+        };
+      } else if (commandCount <= level.medalTargets.silver) {
+        medal = {
+          icon: '🥈',
+          title: '¡Medalla de Plata!',
+          description: `Solución eficiente con ${commandCount} comandos. ¡Muy bien!`
+        };
+      } else if (commandCount <= level.medalTargets.bronze) {
+        medal = {
+          icon: '🥉',
+          title: '¡Medalla de Bronce!',
+          description: `Solución funcional con ${commandCount} comandos. ¡Buen trabajo!`
+        };
+      }
+      
+      if (medal) {
+        medalIcon.textContent = medal.icon;
+        medalTitle.textContent = medal.title;
+        medalDescription.textContent = medal.description;
+        medalDisplay.classList.remove('hidden');
+        playMedalSound();
+      }
+    }
+
+    function initLevel() {
+      const level = currentLevels[currentLevel];
+      robotPos = [...level.start];
+      robotDir = level.direction;
+      isCarryingTrash = false;
+      collectedTrash = [];
+      
+      if (currentMenu === 'bucles_avanzados' && currentLevel === 0 && level.preloadedSolution) {
+        commands = JSON.parse(JSON.stringify(level.preloadedSolution));
+      } else {
+        commands = [];
+      }
+      
+      document.getElementById('current-level').textContent = currentLevel + 1;
+      document.getElementById('level-description').textContent = level.description;
+      document.getElementById('success-message').classList.add('hidden');
+      document.getElementById('complete-message').classList.add('hidden');
+      document.getElementById('failed-message').classList.add('hidden');
+      document.getElementById('medal-earned').classList.add('hidden');
+      closeRepeatConfig();
+      
+      const solutionTutorial = document.getElementById('solution-tutorial');
+      const showTutorialBtn = document.getElementById('show-tutorial-btn');
+      if (currentMenu === 'bucles_avanzados' && currentLevel === 0 && level.showSolution) {
+        solutionTutorial.classList.remove('hidden');
+        showTutorialBtn.classList.add('hidden');
+      } else {
+        solutionTutorial.classList.add('hidden');
+        showTutorialBtn.classList.add('hidden');
+      }
+      
+      if (currentMenu === 'secuencias') {
+        document.getElementById('menu-name').textContent = 'Secuencias Sencillas';
+      } else if (currentMenu === 'secuencias_avanzadas') {
+        document.getElementById('menu-name').textContent = 'Secuencias';
+      } else if (currentMenu === 'repeticiones') {
+        document.getElementById('menu-name').textContent = 'Repeticiones';
+      } else if (currentMenu === 'repeticiones2') {
+        document.getElementById('menu-name').textContent = 'Repeticiones 2';
+      } else if (currentMenu === 'bucles') {
+        document.getElementById('menu-name').textContent = 'Bucles Sencillos';
+      } else if (currentMenu === 'bucles_avanzados') {
+        document.getElementById('menu-name').textContent = 'Bucles Avanzados';
+      }
+      
+      const dropoffBtn = document.getElementById('btn-dropoff');
+      if (currentMenu === 'secuencias_avanzadas' || currentMenu === 'repeticiones2') {
+        if (level.container) {
+          dropoffBtn.style.display = 'block';
+        } else {
+          dropoffBtn.style.display = 'none';
+        }
+      } else {
+        dropoffBtn.style.display = 'none';
+      }
+
+      const repeatBtn = document.getElementById('btn-repeat');
+      const loopButtons = document.getElementById('loop-buttons');
+      const loopRepeatBtn = document.getElementById('btn-loop-repeat');
+      
+      if (currentMenu === 'repeticiones' || currentMenu === 'repeticiones2') {
+        repeatBtn.style.display = 'block';
+        loopButtons.style.display = 'none';
+        if (loopRepeatBtn) loopRepeatBtn.style.display = 'none';
+      } else if (currentMenu === 'bucles' || currentMenu === 'bucles_avanzados') {
+        repeatBtn.style.display = 'none';
+        loopButtons.style.display = 'grid';
+        if (loopRepeatBtn) loopRepeatBtn.style.display = 'block';
+      } else {
+        repeatBtn.style.display = 'none';
+        loopButtons.style.display = 'none';
+        if (loopRepeatBtn) loopRepeatBtn.style.display = 'none';
+      }
+      
+      updateProgressBar();
+      updateMedalTargets();
+      renderGrid();
+      updateCommandSequence();
+    }
+
+    function hideSolutionTutorial() {
+      document.getElementById('solution-tutorial').classList.add('hidden');
+      const level = currentLevels[currentLevel];
+      if (currentMenu === 'bucles_avanzados' && currentLevel === 0 && level.showSolution) {
+        document.getElementById('show-tutorial-btn').classList.remove('hidden');
+      }
+    }
+
+    function showSolutionTutorial() {
+      document.getElementById('solution-tutorial').classList.remove('hidden');
+      document.getElementById('show-tutorial-btn').classList.add('hidden');
+    }
+
+    function updateProgressBar() {
+      const progressBar = document.getElementById('progress-bar');
+      progressBar.innerHTML = '';
+      
+      for (let i = 0; i < 10; i++) {
+        const dot = document.createElement('div');
+        dot.style.width = '100%';
+        dot.style.height = '12px';
+        dot.style.borderRadius = '6px';
+        dot.style.transition = 'all 0.3s ease';
+        
+        if (i < currentLevel) {
+          dot.style.background = '#10b981';
+        } else if (i === currentLevel) {
+          dot.style.background = '#f97316';
+          dot.style.animation = 'pulse 2s ease-in-out infinite';
+        } else {
+          dot.style.background = '#d1d5db';
+        }
+        
+        progressBar.appendChild(dot);
+      }
+    }
+
+    function renderGrid() {
+      const level = currentLevels[currentLevel];
+      const gridContainer = document.getElementById('game-grid');
+      gridContainer.innerHTML = '';
+      gridContainer.style.display = 'flex';
+      gridContainer.style.flexDirection = 'column';
+      gridContainer.style.gap = '0';
+      
+      for (let y = 0; y < level.grid; y++) {
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '0';
+        
+        for (let x = 0; x < level.grid; x++) {
+          const cell = document.createElement('div');
+          cell.className = 'grid-cell';
+          
+          let hasTrashHere = false;
+          if (level.trashMultiple) {
+            const wasCollected = collectedTrash.some(t => t[0] === x && t[1] === y);
+            hasTrashHere = level.trashMultiple.some(t => t[0] === x && t[1] === y) && !wasCollected;
+          } else if (level.trash) {
+            hasTrashHere = (x === level.trash[0] && y === level.trash[1] && !isCarryingTrash);
+          }
+          
+          if (x === robotPos[0] && y === robotPos[1]) {
+            const robotDiv = document.createElement('div');
+            robotDiv.className = 'robot';
+            robotDiv.innerHTML = createRobotSVG(robotDir);
+            cell.appendChild(robotDiv);
+            
+            if (hasTrashHere) {
+              cell.style.background = '#fef3c7';
+              cell.style.border = '3px solid #f59e0b';
+              cell.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.5)';
+              
+              const cornerTrash = document.createElement('div');
+              cornerTrash.style.cssText = `
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                font-size: 18px;
+                z-index: 5;
+                animation: pulse 1.5s ease-in-out infinite;
+              `;
+              cornerTrash.textContent = '🗑️';
+              cell.appendChild(cornerTrash);
+            }
+          } else {
+            if (hasTrashHere) {
+              const trashDiv = document.createElement('div');
+              trashDiv.className = 'trash-icon';
+              trashDiv.innerHTML = createTrashSVG();
+              cell.appendChild(trashDiv);
+            }
+          }
+
+          if (level.container && x === level.container[0] && y === level.container[1]) {
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'trash-icon';
+            containerDiv.innerHTML = createContainerSVG();
+            cell.appendChild(containerDiv);
+          }
+
+          const isObstacle = level.obstacles && level.obstacles.some(obs => obs[0] === x && obs[1] === y);
+          if (isObstacle) {
+            cell.style.background = '#78716c';
+            const obstacleDiv = document.createElement('div');
+            obstacleDiv.className = 'obstacle';
+            obstacleDiv.textContent = '🚧';
+            cell.appendChild(obstacleDiv);
+          }
+          
+          row.appendChild(cell);
+        }
+        gridContainer.appendChild(row);
+      }
+    }
+
+    function addCommand(cmd) {
+      if (isRunning) return;
+      commands.push({ type: cmd, repeat: 1 });
+      updateCommandSequence();
+      updateMedalTargets();
+    }
+
+    function addRepeat() {
+      if (isRunning || commands.length === 0) return;
+      
+      const lastCommand = commands[commands.length - 1];
+      if (lastCommand.type === 'repeat') return;
+      
+      commands.push({ type: 'repeat', repeat: 2 });
+      updateCommandSequence();
+      updateMedalTargets();
+      
+      showRepeatConfig(commands.length - 1);
+    }
+
+    function addLoopRepeat() {
+      if (isRunning) return;
+      
+      commands.push({ 
+        type: 'loop_repeat', 
+        repeat: 2,
+        associated: false 
+      });
+      
+      updateCommandSequence();
+      updateMedalTargets();
+      
+      showRepeatConfig(commands.length - 1);
+    }
+
+    function startLoop() {
+      if (isRunning) return;
+      
+      let lastRepeatIndex = -1;
+      for (let i = commands.length - 1; i >= 0; i--) {
+        if (commands[i].type === 'loop_repeat' && !commands[i].associated) {
+          lastRepeatIndex = i;
+          break;
+        }
+      }
+      
+      if (lastRepeatIndex === -1) {
+        const startBtn = document.getElementById('btn-start-loop');
+        startBtn.style.background = '#dc2626';
+        startBtn.innerHTML = '<span style="font-size: 1.2rem;">⚠️ USA 🔢 REPETIR PRIMERO</span>';
+        setTimeout(() => {
+          startBtn.style.background = '#ec4899';
+          startBtn.innerHTML = '<span style="font-size: 1.5rem;">(</span> <span style="font-size: 0.65rem;" id="start-loop-label">PARÉNTESIS ABRE</span>';
+        }, 2500);
+        return;
+      }
+      
+      commands[lastRepeatIndex].associated = true;
+      
+      commands.push({
+        type: 'loop_start',
+        id: Date.now() + Math.random(),
+        repeatIndex: lastRepeatIndex
+      });
+      
+      updateCommandSequence();
+      updateMedalTargets();
+      
+      const startBtn = document.getElementById('btn-start-loop');
+      startBtn.style.background = '#10b981';
+      startBtn.innerHTML = '<span style="font-size: 1.5rem;">✓</span> <span style="font-size: 0.75rem;">PARÉNTESIS ABIERTO</span>';
+      setTimeout(() => {
+        startBtn.style.background = '#ec4899';
+        startBtn.innerHTML = '<span style="font-size: 1.5rem;">(</span> <span style="font-size: 0.65rem;" id="start-loop-label">PARÉNTESIS ABRE</span>';
+      }, 1000);
+    }
+
+    function endLoop() {
+      if (isRunning) return;
+      
+      let lastOpenIndex = -1;
+      let openLoops = [];
+      
+      for (let i = 0; i < commands.length; i++) {
+        if (commands[i].type === 'loop_start') {
+          openLoops.push(i);
+        } else if (commands[i].type === 'loop_end') {
+          openLoops.pop();
+        }
+      }
+      
+      if (openLoops.length === 0) {
+        const endBtn = document.getElementById('btn-end-loop');
+        endBtn.style.background = '#dc2626';
+        endBtn.innerHTML = '<span style="font-size: 1.5rem;">⚠️</span> <span style="font-size: 0.65rem;">USA ( PARÉNTESIS ABRE PRIMERO</span>';
+        setTimeout(() => {
+          endBtn.style.background = '#ec4899';
+          endBtn.innerHTML = '<span style="font-size: 1.5rem;">)</span> <span style="font-size: 0.65rem;" id="end-loop-label">PARÉNTESIS CIERRA</span>';
+        }, 2000);
+        return;
+      }
+      
+      lastOpenIndex = openLoops[openLoops.length - 1];
+      
+      let hasCommands = false;
+      for (let i = lastOpenIndex + 1; i < commands.length; i++) {
+        if (commands[i].type !== 'loop_repeat' && commands[i].type !== 'loop_start' && commands[i].type !== 'loop_end') {
+          hasCommands = true;
+          break;
+        }
+      }
+      
+      if (!hasCommands) {
+        const endBtn = document.getElementById('btn-end-loop');
+        endBtn.style.background = '#dc2626';
+        endBtn.innerHTML = '<span style="font-size: 1.5rem;">⚠️</span> <span style="font-size: 0.65rem;">AGREGA COMANDOS ENTRE ( )</span>';
+        setTimeout(() => {
+          endBtn.style.background = '#ec4899';
+          endBtn.innerHTML = '<span style="font-size: 1.5rem;">)</span> <span style="font-size: 0.65rem;" id="end-loop-label">PARÉNTESIS CIERRA</span>';
+        }, 2000);
+        return;
+      }
+      
+      const loopStartCmd = commands[lastOpenIndex];
+      commands.push({
+        type: 'loop_end',
+        id: loopStartCmd.id,
+        repeatIndex: loopStartCmd.repeatIndex
+      });
+      
+      updateCommandSequence();
+      updateMedalTargets();
+      
+      const endBtn = document.getElementById('btn-end-loop');
+      endBtn.style.background = '#10b981';
+      endBtn.innerHTML = '<span style="font-size: 1.5rem;">✓</span> <span style="font-size: 0.75rem;">PARÉNTESIS CERRADO</span>';
+      setTimeout(() => {
+        endBtn.style.background = '#ec4899';
+        endBtn.innerHTML = '<span style="font-size: 1.5rem;">)</span> <span style="font-size: 0.65rem;" id="end-loop-label">PARÉNTESIS CIERRA</span>';
+      }, 1000);
+    }
+
+    function showRepeatConfig(index) {
+      const existingPanel = document.getElementById('repeat-config-panel');
+      if (existingPanel) {
+        existingPanel.remove();
+      }
+      
+      const panel = document.createElement('div');
+      panel.id = 'repeat-config-panel';
+      panel.className = 'repeat-config';
+      
+      panel.innerHTML = `
+        <div class="repeat-config-title">🔢 Configurar Repetición</div>
+        <div class="repeat-config-controls">
+          <button onclick="adjustRepeatFromPanel(${index}, -1)">−</button>
+          <div class="repeat-config-number" id="repeat-panel-number">${commands[index].repeat}</div>
+          <button onclick="adjustRepeatFromPanel(${index}, 1)">+</button>
+          <button onclick="closeRepeatConfig()" style="background: #10b981; width: 60px;">✓</button>
+        </div>
+      `;
+      
+      const commandSequenceParent = document.getElementById('command-sequence').parentElement;
+      commandSequenceParent.appendChild(panel);
+    }
+
+    function adjustRepeatFromPanel(index, delta) {
+      if (commands[index]) {
+        const newValue = commands[index].repeat + delta;
+        if (newValue >= 2 && newValue <= 9) {
+          commands[index].repeat = newValue;
+          document.getElementById('repeat-panel-number').textContent = newValue;
+          updateCommandSequence();
+          updateMedalTargets();
+        }
+      }
+    }
+
+    function closeRepeatConfig() {
+      const panel = document.getElementById('repeat-config-panel');
+      if (panel) {
+        panel.remove();
+      }
+    }
+
+    function updateCommandSequence() {
+      const container = document.getElementById('command-sequence');
+      container.innerHTML = '';
+      
+      container.addEventListener('dragover', (e) => {
+        if (isRunning) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+
+      container.addEventListener('drop', (e) => {
+        if (isRunning) return;
+        e.preventDefault();
+        
+        const fromIndex = parseInt(e.dataTransfer.getData('text/html'));
+        const draggingElement = document.querySelector('.dragging');
+        
+        if (!draggingElement) return;
+        
+        const afterElement = getDragAfterElement(container, e.clientY);
+        
+        if (afterElement == null) {
+          const [movedCmd] = commands.splice(fromIndex, 1);
+          commands.push(movedCmd);
+        } else {
+          const toIndex = parseInt(afterElement.dataset.index);
+          const [movedCmd] = commands.splice(fromIndex, 1);
+          const adjustedToIndex = fromIndex < toIndex ? toIndex - 1 : toIndex;
+          commands.splice(adjustedToIndex, 0, movedCmd);
+        }
+        
+        updateCommandSequence();
+        updateMedalTargets();
+      });
+      
+      if (commands.length === 0) {
+        const placeholder = document.createElement('p');
+        placeholder.textContent = 'Haz clic en los botones para agregar comandos...';
+        placeholder.className = 'text-center w-full text-gray-400';
+        container.appendChild(placeholder);
+        return;
+      }
+      
+      const commandColors = {
+        'forward': '#2563eb',
+        'backward': '#eab308',
+        'left': '#f97316',
+        'right': '#a855f7',
+        'pickup': '#dc2626',
+        'dropoff': '#059669',
+        'repeat': '#8b5cf6',
+        'loop_repeat': '#8b5cf6',
+        'loop_start': '#ec4899',
+        'loop_end': '#ec4899'
+      };
+
+      const commandLabels = {
+        'forward': '⬆',
+        'backward': '⬇',
+        'left': '↶',
+        'right': '↷',
+        'pickup': '🗑️',
+        'dropoff': '📦',
+        'repeat': '🔢',
+        'loop_repeat': 'REPETIR',
+        'loop_start': '(',
+        'loop_end': ')'
+      };
+      
+      for (let i = 0; i < commands.length; i++) {
+        const cmd = commands[i];
+        const cmdDiv = document.createElement('div');
+        cmdDiv.className = 'command-item';
+        cmdDiv.style.background = commandColors[cmd.type];
+        cmdDiv.style.color = '#ffffff';
+        cmdDiv.draggable = true;
+        cmdDiv.dataset.index = i;
+
+        if (cmd.type === 'repeat') {
+          cmdDiv.style.fontSize = '1.5rem';
+          cmdDiv.innerHTML = `
+            <div class="repeat-command">
+              <span style="font-size: 1.3rem;">🔢</span>
+              <span class="repeat-badge">${cmd.repeat}</span>
+            </div>
+          `;
+          
+          let clickTimeout = null;
+          
+          cmdDiv.addEventListener('click', (e) => {
+            if (!isRunning) {
+              if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickTimeout = null;
+                commands.splice(i, 1);
+                updateCommandSequence();
+                updateMedalTargets();
+              } else {
+                clickTimeout = setTimeout(() => {
+                  showRepeatConfig(i);
+                  clickTimeout = null;
+                }, 300);
+              }
+            }
+          });
+        } else if (cmd.type === 'loop_repeat') {
+          cmdDiv.style.fontSize = '0.85rem';
+          cmdDiv.style.fontWeight = 'bold';
+          cmdDiv.innerHTML = `REPETIR ${cmd.repeat} VECES`;
+          
+          let clickTimeout = null;
+          
+          cmdDiv.addEventListener('click', (e) => {
+            if (!isRunning) {
+              if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickTimeout = null;
+                
+                for (let j = i + 1; j < commands.length; j++) {
+                  if (commands[j].type === 'loop_start' && commands[j].repeatIndex === i) {
+                    const loopId = commands[j].id;
+                    for (let k = j + 1; k < commands.length; k++) {
+                      if (commands[k].type === 'loop_end' && commands[k].id === loopId) {
+                        commands.splice(k, 1);
+                        break;
+                      }
+                    }
+                    commands.splice(j, 1);
+                    break;
+                  }
+                }
+                
+                commands.splice(i, 1);
+                updateCommandSequence();
+                updateMedalTargets();
+              } else {
+                clickTimeout = setTimeout(() => {
+                  showRepeatConfig(i);
+                  clickTimeout = null;
+                }, 300);
+              }
+            }
+          });
+        } else if (cmd.type === 'loop_start') {
+          cmdDiv.style.fontSize = '2rem';
+          cmdDiv.innerHTML = '(';
+          
+          cmdDiv.addEventListener('click', (e) => {
+            if (!isRunning) {
+              if (cmd.repeatIndex !== undefined) {
+                commands[cmd.repeatIndex].associated = false;
+              }
+              commands.splice(i, 1);
+              updateCommandSequence();
+              updateMedalTargets();
+            }
+          });
+        } else if (cmd.type === 'loop_end') {
+          cmdDiv.style.fontSize = '2rem';
+          cmdDiv.innerHTML = ')';
+          
+          cmdDiv.addEventListener('click', (e) => {
+            if (!isRunning) {
+              commands.splice(i, 1);
+              updateCommandSequence();
+              updateMedalTargets();
+            }
+          });
+        } else {
+          cmdDiv.style.fontSize = '1.5rem';
+          const icon = document.createElement('span');
+          icon.textContent = commandLabels[cmd.type];
+          cmdDiv.appendChild(icon);
+          
+          cmdDiv.addEventListener('click', (e) => {
+            if (!isRunning) {
+              commands.splice(i, 1);
+              updateCommandSequence();
+              updateMedalTargets();
+            }
+          });
+        }
+
+        cmdDiv.addEventListener('dragstart', (e) => {
+          if (isRunning) {
+            e.preventDefault();
+            return;
+          }
+          cmdDiv.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', i);
+        });
+
+        cmdDiv.addEventListener('dragend', (e) => {
+          cmdDiv.classList.remove('dragging');
+        });
+
+        container.appendChild(cmdDiv);
+      }
+    }
+    
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('.command-item:not(.dragging)')];
+      
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function rotateLeft() {
+      const dirs = ['up', 'left', 'down', 'right'];
+      const currentIndex = dirs.indexOf(robotDir);
+      robotDir = dirs[(currentIndex + 1) % 4];
+    }
+
+    function rotateRight() {
+      const dirs = ['up', 'right', 'down', 'left'];
+      const currentIndex = dirs.indexOf(robotDir);
+      robotDir = dirs[(currentIndex + 1) % 4];
+    }
+
+    async function executeCommands() {
+      if (isRunning || commands.length === 0) return;
+      
+      isRunning = true;
+      const level = currentLevels[currentLevel];
+      robotPos = [...level.start];
+      robotDir = level.direction;
+      isCarryingTrash = false;
+      let completedSuccessfully = false;
+      let hasError = false;
+      let errorMessage = '';
+      
+      closeRepeatConfig();
+      
+      function expandCommands(cmdList, baseIndexOffset = 0) {
+        let expanded = [];
+        let i = 0;
+        
+        while (i < cmdList.length) {
+          const cmd = cmdList[i];
+          
+          if (cmd.type === 'loop_repeat') {
+            let startIndex = -1;
+            for (let j = i + 1; j < cmdList.length; j++) {
+              if (cmdList[j].type === 'loop_start' && cmdList[j].repeatIndex === (baseIndexOffset + i)) {
+                startIndex = j;
+                break;
+              }
+            }
+            
+            if (startIndex !== -1) {
+              let endIndex = -1;
+              const loopId = cmdList[startIndex].id;
+              let nestedLevel = 0;
+              
+              for (let j = startIndex + 1; j < cmdList.length; j++) {
+                if (cmdList[j].type === 'loop_start') {
+                  nestedLevel++;
+                } else if (cmdList[j].type === 'loop_end') {
+                  if (nestedLevel === 0 && cmdList[j].id === loopId) {
+                    endIndex = j;
+                    break;
+                  } else {
+                    nestedLevel--;
+                  }
+                }
+              }
+              
+              if (endIndex !== -1) {
+                const loopContent = cmdList.slice(startIndex + 1, endIndex);
+                
+                for (let iteration = 0; iteration < cmd.repeat; iteration++) {
+                  const expandedContent = expandCommands(loopContent, baseIndexOffset + startIndex + 1);
+                  expanded.push(...expandedContent);
+                }
+                
+                i = endIndex + 1;
+                continue;
+              }
+            }
+            
+            i++;
+          } else if (cmd.type === 'repeat') {
+            if (expanded.length > 0) {
+              const lastCmd = expanded[expanded.length - 1];
+              for (let r = 0; r < cmd.repeat - 1; r++) {
+                expanded.push({ ...lastCmd, originalIndex: baseIndexOffset + i });
+              }
+            }
+            i++;
+          } else if (cmd.type === 'loop_start' || cmd.type === 'loop_end') {
+            i++;
+          } else {
+            expanded.push({ ...cmd, originalIndex: baseIndexOffset + i });
+            i++;
+          }
+        }
+        
+        return expanded;
+      }
+      
+      let expandedCommands = expandCommands(commands);
+
+      let currentHighlightIndex = -1;
+
+      for (let i = 0; i < expandedCommands.length; i++) {
+        const cmd = expandedCommands[i];
+        
+        const commandItems = document.querySelectorAll('.command-item');
+        
+        if (currentHighlightIndex >= 0 && commandItems[currentHighlightIndex]) {
+          commandItems[currentHighlightIndex].classList.remove('executing');
+        }
+        
+        if (commandItems[cmd.originalIndex]) {
+          commandItems[cmd.originalIndex].classList.add('executing');
+          currentHighlightIndex = cmd.originalIndex;
+        }
+        
+        if (cmd.type === 'forward') {
+          const dir = directions[robotDir];
+          const newX = robotPos[0] + dir[0];
+          const newY = robotPos[1] + dir[1];
+          
+          if (newX < 0 || newX >= level.grid || newY < 0 || newY >= level.grid) {
+            hasError = true;
+            errorMessage = '¡URbaBot intentó salir de la cuadrícula! 🚫<br>Revisa tus comandos de movimiento.';
+            playFailSound();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            break;
+          }
+          
+          const isObstacle = level.obstacles.some(obs => obs[0] === newX && obs[1] === newY);
+          if (isObstacle) {
+            hasError = true;
+            errorMessage = '¡URbaBot chocó contra un obstáculo! 🚧<br>Planea mejor tu ruta.';
+            playFailSound();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            break;
+          }
+          
+          robotPos[0] = newX;
+          robotPos[1] = newY;
+          playStepSound();
+          
+        } else if (cmd.type === 'backward') {
+          const dir = directions[robotDir];
+          const newX = robotPos[0] - dir[0];
+          const newY = robotPos[1] - dir[1];
+          
+          if (newX < 0 || newX >= level.grid || newY < 0 || newY >= level.grid) {
+            hasError = true;
+            errorMessage = '¡URbaBot intentó salir de la cuadrícula! 🚫<br>Revisa tus comandos de movimiento.';
+            playFailSound();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            break;
+          }
+          
+          const isObstacle = level.obstacles.some(obs => obs[0] === newX && obs[1] === newY);
+          if (isObstacle) {
+            hasError = true;
+            errorMessage = '¡URbaBot chocó contra un obstáculo! 🚧<br>Planea mejor tu ruta.';
+            playFailSound();
+            await new Promise(resolve => setTimeout(resolve, 300));
+            break;
+          }
+          
+          robotPos[0] = newX;
+          robotPos[1] = newY;
+          playStepSound();
+          
+        } else if (cmd.type === 'left') {
+          rotateLeft();
+          playRotateSound();
+        } else if (cmd.type === 'right') {
+          rotateRight();
+          playRotateSound();
+        } else if (cmd.type === 'pickup') {
+          if (level.trashMultiple) {
+            const trashHere = level.trashMultiple.find(t => t[0] === robotPos[0] && t[1] === robotPos[1]);
+            const alreadyCollected = collectedTrash.some(t => t[0] === robotPos[0] && t[1] === robotPos[1]);
+            
+            if (trashHere && !alreadyCollected) {
+              collectedTrash.push([robotPos[0], robotPos[1]]);
+              playSuccessSound();
+              
+              if (collectedTrash.length === level.trashMultiple.length) {
+                completedSuccessfully = true;
+                renderGrid();
+                await new Promise(resolve => setTimeout(resolve, executionSpeed));
+                
+                if (currentHighlightIndex >= 0 && commandItems[currentHighlightIndex]) {
+                  commandItems[currentHighlightIndex].classList.remove('executing');
+                }
+                
+                document.getElementById('success-text').innerHTML = `¡URbaBot recogió toda la basura! 🗑️✨<br>Recolectaste ${collectedTrash.length} botes de basura`;
+                
+                if (currentMenu === 'bucles_avanzados') {
+                  const commandCount = countExpandedCommands(commands);
+                  showMedalEarned(commandCount);
+                }
+                
+                if (currentLevel < currentLevels.length - 1) {
+                  document.getElementById('success-message').classList.remove('hidden');
+                } else {
+                  document.getElementById('complete-message').classList.remove('hidden');
+                }
+                isRunning = false;
+                return;
+              }
+            }
+          } else {
+            if (level.trash && robotPos[0] === level.trash[0] && robotPos[1] === level.trash[1] && !isCarryingTrash) {
+              isCarryingTrash = true;
+              playSuccessSound();
+              
+              if (!level.container) {
+                completedSuccessfully = true;
+                renderGrid();
+                await new Promise(resolve => setTimeout(resolve, executionSpeed));
+                
+                if (currentHighlightIndex >= 0 && commandItems[currentHighlightIndex]) {
+                  commandItems[currentHighlightIndex].classList.remove('executing');
+                }
+                
+                document.getElementById('success-text').innerHTML = '¡URbaBot recogió la basura! 🗑️✨';
+                if (currentLevel < currentLevels.length - 1) {
+                  document.getElementById('success-message').classList.remove('hidden');
+                } else {
+                  document.getElementById('complete-message').classList.remove('hidden');
+                }
+                isRunning = false;
+                return;
+              }
+            }
+          }
+        } else if (cmd.type === 'dropoff') {
+          if (level.container && 
+              robotPos[0] === level.container[0] && 
+              robotPos[1] === level.container[1] && 
+              isCarryingTrash) {
+            completedSuccessfully = true;
+            playSuccessSound();
+            renderGrid();
+            await new Promise(resolve => setTimeout(resolve, executionSpeed));
+            
+            if (currentHighlightIndex >= 0 && commandItems[currentHighlightIndex]) {
+              commandItems[currentHighlightIndex].classList.remove('executing');
+            }
+            
+            document.getElementById('success-text').innerHTML = '¡URbaBot recogió la basura y la depositó en el contenedor adecuado! 🗑️📦✨';
+            if (currentLevel < currentLevels.length - 1) {
+              document.getElementById('success-message').classList.remove('hidden');
+            } else {
+              document.getElementById('complete-message').classList.remove('hidden');
+            }
+            isRunning = false;
+            return;
+          }
+        }
+        
+        renderGrid();
+        await new Promise(resolve => setTimeout(resolve, executionSpeed));
+      }
+
+      const commandItems = document.querySelectorAll('.command-item');
+      if (currentHighlightIndex >= 0 && commandItems[currentHighlightIndex]) {
+        commandItems[currentHighlightIndex].classList.remove('executing');
+      }
+      
+      if (hasError) {
+        document.getElementById('failed-text').innerHTML = errorMessage;
+        document.getElementById('failed-message').classList.remove('hidden');
+      } else if (!completedSuccessfully) {
+        playFailSound();
+        await new Promise(resolve => setTimeout(resolve, executionSpeed * 0.8));
+        
+        if (level.trashMultiple) {
+          const remaining = level.trashMultiple.length - collectedTrash.length;
+          if (collectedTrash.length === 0) {
+            errorMessage = '¡No recogiste ninguna basura! 🗑️<br>Usa PICK UP cuando pases sobre cada bote de basura.';
+          } else {
+            errorMessage = `¡Falta basura por recoger! 🗑️<br>Recogiste ${collectedTrash.length} de ${level.trashMultiple.length} botes. Te faltan ${remaining}.`;
+          }
+        } else if (level.container) {
+          if (!isCarryingTrash) {
+            errorMessage = '¡No recogiste la basura! 🗑️<br>Usa PICK UP sobre la basura primero.';
+          } else {
+            errorMessage = '¡No depositaste la basura en el contenedor! 📦<br>Usa DROP OFF sobre el contenedor verde.';
+          }
+        } else {
+          errorMessage = '¡Aquí no hay basura! 🗑️<br>Revisa bien la posición de la basura y vuelve a intentarlo.';
+        }
+        
+        document.getElementById('failed-text').innerHTML = errorMessage;
+        document.getElementById('failed-message').classList.remove('hidden');
+      }
+      
+      isRunning = false;
+    }
+
+    function resetRobot() {
+      if (isRunning) return;
+      
+      const level = currentLevels[currentLevel];
+      robotPos = [...level.start];
+      robotDir = level.direction;
+      isCarryingTrash = false;
+      collectedTrash = [];
+      document.getElementById('success-message').classList.add('hidden');
+      document.getElementById('complete-message').classList.add('hidden');
+      document.getElementById('failed-message').classList.add('hidden');
+      document.getElementById('medal-earned').classList.add('hidden');
+      renderGrid();
+    }
+
+    function clearCommands() {
+      if (isRunning) return;
+      commands = [];
+      closeRepeatConfig();
+      updateCommandSequence();
+      updateMedalTargets();
+      resetRobot();
+    }
+
+    function nextLevel() {
+      if (currentLevel < currentLevels.length - 1) {
+        currentLevel++;
+        initLevel();
+      } else {
+        showMenu();
+      }
+    }
+
+    document.getElementById('btn-forward').addEventListener('click', () => addCommand('forward'));
+    document.getElementById('btn-backward').addEventListener('click', () => addCommand('backward'));
+    document.getElementById('btn-left').addEventListener('click', () => addCommand('left'));
+    document.getElementById('btn-right').addEventListener('click', () => addCommand('right'));
+    document.getElementById('btn-pickup').addEventListener('click', () => addCommand('pickup'));
+    document.getElementById('btn-dropoff').addEventListener('click', () => addCommand('dropoff'));
+    document.getElementById('btn-repeat').addEventListener('click', addRepeat);
+    document.getElementById('btn-loop-repeat').addEventListener('click', addLoopRepeat);
+    document.getElementById('btn-start-loop').addEventListener('click', startLoop);
+    document.getElementById('btn-end-loop').addEventListener('click', endLoop);
+    document.getElementById('btn-run').addEventListener('click', executeCommands);
+    document.getElementById('btn-reset').addEventListener('click', resetRobot);
+    document.getElementById('btn-clear').addEventListener('click', clearCommands);
+    document.getElementById('next-level-btn').addEventListener('click', nextLevel);
+    document.getElementById('btn-back-menu').addEventListener('click', showMenu);
+
+    function setSpeedNormal() {
+      executionSpeed = 500;
+      document.getElementById('btn-speed-normal').classList.add('active');
+      document.getElementById('btn-speed-turbo').classList.remove('active');
+    }
+
+    function setSpeedTurbo() {
+      executionSpeed = 150;
+      document.getElementById('btn-speed-turbo').classList.add('active');
+      document.getElementById('btn-speed-normal').classList.remove('active');
+    }
+</script>
+  </div>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b55908d17dcb6ac',t:'MTc2Njk3MjE2Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
